@@ -1,0 +1,221 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #f6f4f4;
+      --azul: #2f3f8f;
+      --rojo: #e2342b;
+      --amarillo: #f4c21b;
+    }
+    /* Todo lo que está "sobre el mapa" vive en #mundo, que hace de cámara */
+    #mundo {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1080px;
+      height: 1920px;
+    }
+    /* mapa 939x1584 escalado a 1138x1920 (cubre el lienzo); la punta de la chincheta cae en (538, 738) */
+    #mapa {
+      position: absolute;
+      left: -29px;
+      top: 0;
+      width: 1138px;
+      height: 1920px;
+    }
+    #onda {
+      position: absolute;
+      left: 478px;
+      top: 708px;
+      width: 120px;
+      height: 60px;
+      border-radius: 50%;
+      border: 6px solid var(--rojo);
+      opacity: 0;
+    }
+    #hueco {
+      position: absolute;
+      left: 268px;
+      top: 690px;
+      width: 540px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(40, 32, 28, 0.55), rgba(40, 32, 28, 0.25) 60%, rgba(40, 32, 28, 0));
+      opacity: 0;
+    }
+    #grietas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1080px;
+      height: 1920px;
+    }
+    #grietas path {
+      fill: none;
+      stroke: #3b3430;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    #edificio-caja {
+      position: absolute;
+      left: 158px;
+      top: 270px;
+      width: 760px;
+      height: 517px;
+      perspective: 1400px;
+      perspective-origin: 50% 0%;
+      opacity: 0;
+    }
+    #edificio {
+      position: absolute;
+      inset: 0;
+      width: 760px;
+      height: 517px;
+      filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.35));
+    }
+    #chincheta {
+      position: absolute;
+      left: 484px;
+      top: 594px;
+      width: 109px;
+      height: 149px;
+    }
+    #calle {
+      opacity: 0;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1080px;
+      height: 1920px;
+    }
+    #etiqueta {
+      position: absolute;
+      left: 80px;
+      top: 300px;
+      width: 800px;
+      height: 180px;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      padding: 0 44px;
+      border-radius: 40px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+      font-family: "Montserrat", sans-serif;
+    }
+    #etiqueta-icono {
+      flex: 0 0 auto;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: var(--azul);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #etiqueta-textos {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #etiqueta-marca {
+      color: var(--azul);
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+    #etiqueta-sucursal {
+      color: var(--rojo);
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+  </style>
+
+  <div id="root" data-composition-id="ubicacion" data-width="1080" data-height="1920">
+    <div id="mundo" data-layout-allow-overflow>
+      <img id="mapa" src="assets/mapa.jpg" alt="" />
+      <div id="onda"></div>
+      <div id="hueco"></div>
+      <svg id="grietas" viewBox="0 0 1080 1920" data-layout-ignore>
+        <path id="g1" d="M538 742 L470 760 L430 752 L372 774 L318 768 L262 790" stroke-width="7" />
+        <path id="g2" d="M540 742 L606 762 L652 754 L706 778 L760 772 L824 796" stroke-width="7" />
+        <path id="g3" d="M536 746 L512 790 L526 826 L498 872" stroke-width="6" />
+        <path id="g4" d="M544 746 L578 796 L566 840 L596 890" stroke-width="5" />
+        <path id="g5" d="M430 752 L404 720 L360 712" stroke-width="4" />
+        <path id="g6" d="M706 778 L740 812 L790 822" stroke-width="4" />
+        <path id="g7" d="M318 768 L300 800 L250 818" stroke-width="3" />
+        <path id="g8" d="M652 754 L676 724 L724 716" stroke-width="3" />
+      </svg>
+      <div id="edificio-caja">
+        <img id="edificio" src="assets/fachada-3d.png" alt="" />
+      </div>
+      <img id="chincheta" src="assets/pin.png" alt="" />
+    </div>
+
+    <img id="calle" data-layout-allow-overflow src="assets/calle.jpg" alt="" />
+
+    <div id="etiqueta">
+      <div id="etiqueta-icono">
+        <svg width="52" height="64" viewBox="0 0 52 64">
+          <path d="M26 2C13 2 3 12 3 25c0 17 23 37 23 37s23-20 23-37C49 12 39 2 26 2z" fill="#e2342b" />
+          <circle cx="26" cy="25" r="9" fill="#ffffff" />
+        </svg>
+      </div>
+      <div id="etiqueta-textos">
+        <div id="etiqueta-marca" data-var-text="marca">Arcoiris Colchón &amp; Sommier</div>
+        <div id="etiqueta-sucursal" data-var-text="sucursal">Sucursal Juncal</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tl = gsap.timeline({ paused: true });
+
+    // Estados iniciales (fromTo en todo para que el seek sea estable)
+    gsap.set("#mundo", { x: 0, y: 0, scale: 1, transformOrigin: "538px 480px" });
+
+    // 1 · La chincheta cae y rebota sobre la sucursal
+    tl.fromTo("#chincheta", { y: -820, opacity: 1, scale: 1 }, { y: 0, duration: 0.62, ease: "bounce.out" }, 0.2);
+    tl.fromTo("#onda", { opacity: 0.7, scale: 0.2 }, { opacity: 0, scale: 3.2, duration: 0.7, ease: "power2.out" }, 0.72);
+
+    // 2 · El suelo se agrieta y tiembla
+    const grietas = ["#g1", "#g2", "#g3", "#g4", "#g5", "#g6", "#g7", "#g8"];
+    grietas.forEach(function (sel, i) {
+      tl.fromTo(sel, { strokeDasharray: 600, strokeDashoffset: 600 }, { strokeDashoffset: 0, duration: 0.32, ease: "power2.out" }, 1.0 + i * 0.03);
+    });
+    tl.fromTo("#hueco", { opacity: 0, scaleX: 0.1, scaleY: 0.1 }, { opacity: 1, scaleX: 1, scaleY: 1, duration: 0.6, ease: "power3.out" }, 1.05);
+    const temblor = [6, -5, 4, -3, 2, 0];
+    temblor.forEach(function (v, i) {
+      tl.to("#mundo", { x: v, duration: 0.05, ease: "none" }, 1.0 + i * 0.05);
+    });
+
+    // 3 · La fachada se levanta del mapa
+    tl.to("#chincheta", { scale: 0.4, opacity: 0, duration: 0.25, ease: "power2.in" }, 1.15);
+    tl.fromTo(
+      "#edificio",
+      { rotationX: -88, scale: 0.55, transformOrigin: "50% 100%" },
+      { rotationX: 0, scale: 1, duration: 1.15, ease: "back.out(1.5)" },
+      1.15,
+    );
+    tl.fromTo("#edificio-caja", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 1.15);
+
+    // Pequeña deriva mientras se ve el edificio
+    tl.to("#mundo", { scale: 1.06, duration: 0.8, ease: "sine.inOut" }, 2.25);
+
+    // 4 · La cámara entra en la tienda y aparece la calle real
+    tl.to("#mundo", { scale: 2.1, x: 52, y: 470, duration: 0.95, ease: "power2.in" }, 3.05);
+    tl.fromTo("#calle", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.inOut" }, 3.7);
+    tl.fromTo("#calle", { scale: 2.2, transformOrigin: "590px 950px" }, { scale: 1.12, duration: 1.45, ease: "power3.out" }, 3.65);
+    tl.to("#calle", { scale: 1.0, duration: 2.9, ease: "sine.out" }, 5.1);
+
+    // 5 · Etiqueta de ubicación
+    tl.fromTo("#etiqueta", { opacity: 0, y: -50 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 4.55);
+
+    window.__timelines["ubicacion"] = tl;
+  </script>
+</template>

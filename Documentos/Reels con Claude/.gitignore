@@ -7,3 +7,5 @@
 *.mp3
 *.m4a
 Reels/*/trabajo/
+.hyperframes/
+node_modules/
