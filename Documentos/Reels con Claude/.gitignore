@@ -1,0 +1,9 @@
+# Vídeos, audio y archivos de trabajo: ocupan varios GB, no van al repositorio
+*.mp4
+*.mov
+*.m4v
+*.mkv
+*.wav
+*.mp3
+*.m4a
+Reels/*/trabajo/

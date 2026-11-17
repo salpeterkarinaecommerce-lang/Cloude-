@@ -1,0 +1,2 @@
+Aquí vive tu estilo. Claude lo lee antes de editar cada reel.
+- Reglas-de-estilo.md: colores (HEX), tipografías, animaciones y normas. La crea Claude contigo.

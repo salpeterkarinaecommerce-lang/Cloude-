@@ -1,0 +1,2 @@
+Un proyecto por reel, lo crea Claude. Dentro está el vídeo FINAL y la portada.
+La carpeta trabajo/ de cada proyecto ocupa bastante: puedes borrarla cuando el reel esté publicado.
