@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es" data-resolution="portrait">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<script src="assets/gsap.min.js"></script>
+<style>
+  @font-face { font-family: "Lora"; src: url("assets/fonts/lora-latin-600-italic.woff2") format("woff2"); font-weight: 600; font-style: italic; }
+  @font-face { font-family: "Lora"; src: url("assets/fonts/lora-latin-700-italic.woff2") format("woff2"); font-weight: 700; font-style: italic; }
+  @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+  @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+  @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0b1330; }
+  #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: "Inter", sans-serif; }
+  .L { position: absolute; inset: 0; }
+  #bg { background: linear-gradient(180deg, #0a1230 0%, #0d1638 38%, #1a2350 52%, #283160 70%, #2f3866 100%); }
+  #bg::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1000px; background: linear-gradient(180deg, rgba(10,18,48,1) 0%, rgba(10,18,48,0) 100%); }
+  #glow { position: absolute; left: 540px; top: 1000px; width: 1500px; height: 1300px; margin: -650px 0 0 -750px; border-radius: 50%;
+          background: radial-gradient(closest-side, rgba(255,226,170,.32), rgba(255,226,170,.10) 45%, rgba(255,226,170,0) 100%); }
+  #spot { position: absolute; left: 540px; top: 900px; width: 1000px; height: 1000px; margin: -500px 0 0 -500px; border-radius: 50%;
+          background: radial-gradient(closest-side, rgba(255,232,185,.30), rgba(255,232,185,0)); opacity: 0; }
+  #stage { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 540px 960px; }
+  #world { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .p { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+  .p .in { position: relative; width: 100%; height: 100%; }
+  .p img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 30px 40px rgba(0,0,0,.45)); }
+  .p .sh { position: absolute; left: 15%; right: 15%; bottom: -60px; height: 40px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.45), rgba(0,0,0,0)); }
+  #ball .orb { position: absolute; inset: 0; border-radius: 50%;
+     background: radial-gradient(circle at 40% 30%, #fff6d6 0%, #f3d589 14%, #d4ab55 42%, #a8802f 72%, #6e4f17 100%);
+     box-shadow: 0 30px 60px rgba(0,0,0,.45), inset -10px -20px 40px rgba(80,50,10,.35); }
+  #flash { position: absolute; left: 540px; top: 1250px; width: 1600px; height: 1600px; margin: -800px 0 0 -800px; border-radius: 50%;
+     background: radial-gradient(closest-side, rgba(255,250,235,1) 0%, rgba(255,232,180,.9) 30%, rgba(255,220,150,.35) 60%, rgba(255,220,150,0) 100%); opacity: 0; }
+  #still { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #endgold { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+  /* headline */
+  #hd { position: absolute; left: 0; right: 0; top: 0; text-align: center; }
+  #h1 { position: absolute; left: 0; right: 0; top: 252px; font-weight: 600; font-size: 76px; letter-spacing: -.01em; color: #f4efe3; }
+  #h2 { position: absolute; left: 0; right: 0; top: 330px; font-family: "Lora", serif; font-style: italic; font-weight: 700; font-size: 124px; color: #e3c27a; padding-left: 10px; }
+  #h3w { position: absolute; left: 0; right: 0; top: 488px; }
+  #h3 { font-family: "Lora", serif; font-style: italic; font-weight: 700; font-size: 124px; color: #f1d48f; display: inline-block; position: relative;
+        text-shadow: 0 0 40px rgba(241,212,143,.45); }
+  #h3 .ul { position: absolute; left: 4%; right: 4%; bottom: 6px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #a8802f, #f6dc9c, #a8802f); transform-origin: 0 50%; }
+  #h3 .shine { position: absolute; inset: 0; overflow: hidden; }
+  #h3 .shine i { position: absolute; top: -10%; bottom: -10%; left: -30%; width: 120px; transform: skewX(-18deg); background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); mix-blend-mode: overlay; }
+  /* logo bug */
+  #bug { position: absolute; left: 822px; top: 200px; width: 180px; height: 82px; }
+  #bug .n { position: absolute; left: 2px; top: 4px; width: 106px; }
+  #bug svg { position: absolute; left: 122px; top: 2px; width: 52px; height: 54px; }
+  #bug .imp { position: absolute; left: 66px; top: 64px; width: 112px; }
+  /* labels */
+  #lab { position: absolute; left: 50%; top: 1560px; width: 760px; margin-left: -380px; height: 150px; }
+  .lb { position: absolute; inset: 0; border-radius: 34px; display: flex; align-items: center; gap: 28px; padding: 0 36px;
+        background: linear-gradient(160deg, rgba(16,26,60,.82), rgba(10,18,44,.9)); border: 2px solid rgba(227,194,122,.6);
+        box-shadow: 0 30px 70px -20px rgba(0,0,0,.7), 0 0 40px -10px rgba(227,194,122,.45); opacity: 0; }
+  .lb .num { font-family: "Lora", serif; font-style: italic; font-weight: 700; font-size: 72px; color: #e3c27a; line-height: 1; min-width: 96px; }
+  .lb .tx small { display: block; font-weight: 600; font-size: 28px; letter-spacing: .2em; color: #e3c27a; }
+  .lb .tx b { display: block; font-weight: 700; font-size: 54px; color: #fff; line-height: 1.1; }
+  .lb .ct { margin-left: auto; font-weight: 600; font-size: 30px; color: rgba(255,255,255,.6); }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="8.2" data-width="1080" data-height="1920">
+  <div class="L clip" data-start="0" data-duration="8.2" data-track-index="0">
+    <div id="bg" class="L"></div>
+    <div id="glow"></div>
+    <div id="spot"></div>
+    <div id="stage"><div id="world">
+      <div class="p" id="box" style="width:940px;height:645px"><div class="in"><img src="assets/box.png"/></div></div>
+      <div class="p" id="mop" style="width:380px;height:413px"><div class="in" id="mopi"><div class="sh"></div><img src="assets/mop.png"/></div></div>
+      <div class="p" id="fan" style="width:139px;height:377px"><div class="in" id="fani"><div class="sh"></div><img src="assets/fan.png"/></div></div>
+      <div class="p" id="gun" style="width:319px;height:307px"><div class="in" id="guni"><div class="sh"></div><img src="assets/gun.png"/></div></div>
+      <div class="p" id="lights" style="width:351px;height:322px"><div class="in" id="lightsi"><div class="sh"></div><img src="assets/lights.png"/></div></div>
+      <div class="p" id="tablet" style="width:350px;height:457px"><div class="in" id="tableti"><div class="sh"></div><img src="assets/tablet.png"/></div></div>
+      <div class="p" id="ball" style="width:230px;height:230px"><div class="in" id="balli"><div class="orb"></div></div></div>
+    </div></div>
+
+    <div id="hd">
+      <div id="h1">Acá hay de todo...</div>
+      <div id="h2">en un solo lugar</div>
+      <div id="h3w"><div id="h3">al mejor precio<span class="ul" id="ul"></span><span class="shine"><i id="shi"></i></span></div></div>
+    </div>
+    <div id="bug"><img class="n" src="assets/l770.png"/>
+      <svg viewBox="0 0 52 54"><g fill="none" stroke="#c9a45c" stroke-width="3.2" stroke-linejoin="round"><path d="M26 3 L49 14 L49 40 L26 51 L3 40 L3 14 Z"/><path d="M3 14 L26 25 L49 14 M26 25 L26 51"/><path d="M14 8.5 L37 19.5 L37 30"/></g></svg>
+      <img class="imp" src="assets/limport.png"/></div>
+
+    <div id="lab">
+      <div class="lb" id="lb0"><span class="num">01</span><span class="tx"><small>TEMPORADA</small><b>Luces navideñas</b></span><span class="ct">/ 05</span></div>
+      <div class="lb" id="lb1"><span class="num">02</span><span class="tx"><small>DIDÁCTICOS</small><b>Pizarra mágica</b></span><span class="ct">/ 05</span></div>
+      <div class="lb" id="lb2"><span class="num">03</span><span class="tx"><small>JUGUETERÍA</small><b>Lanza burbujas</b></span><span class="ct">/ 05</span></div>
+      <div class="lb" id="lb3"><span class="num">04</span><span class="tx"><small>ELECTRO</small><b>Ventiladores</b></span><span class="ct">/ 05</span></div>
+      <div class="lb" id="lb4"><span class="num">05</span><span class="tx"><small>LIMPIEZA</small><b>Mopa giratoria</b></span><span class="ct">/ 05</span></div>
+    </div>
+
+    <div id="flash"></div>
+    <img id="still" src="assets/f210.png"/>
+    <img id="endgold" src="assets/f276.png"/>
+  </div>
+</div>
+<script>
+  const P = 1000;
+  const tl = gsap.timeline({ paused: true });
+  // Object world positions: x,y = CENTER in screen px at camera identity; w,h sizes.
+  const O = {
+    box:    { w: 940, h: 645, s: [565, 1522, 0],   d: [565, 1640, 0] },
+    mop:    { w: 380, h: 413, s: [150, 755, 0],    d: [250, 1160, 60] },
+    fan:    { w: 139, h: 377, s: [205, 1280, 0],   d: [850, 1270, 120] },
+    gun:    { w: 319, h: 307, s: [660, 1150, 0],   d: [560, 930, -300] },
+    lights: { w: 351, h: 322, s: [470, 900, 0],    d: [290, 690, -160] },
+    tablet: { w: 350, h: 457, s: [915, 985, 0],    d: [820, 760, -60] },
+    ball:   { w: 230, h: 230, s: [545, 1110, 0],   d: [560, 1420, 40] }
+  };
+  const el = {
+    box: document.getElementById("box"), mop: document.getElementById("mop"), fan: document.getElementById("fan"), gun: document.getElementById("gun"),
+    lights: document.getElementById("lights"), tablet: document.getElementById("tablet"), ball: document.getElementById("ball")
+  };
+  Object.keys(O).forEach(function (k) {
+    const o = O[k];
+    gsap.set(el[k], { x: o.s[0] - o.w / 2, y: o.s[1] - o.h / 2, z: o.s[2] });
+  });
+  gsap.set(["#h3w"], { opacity: 0 });
+  gsap.set("#ul", { scaleX: 0 });
+
+  // 0 · flash covers the cut from the original frame
+  tl.fromTo("#flash", { opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1, duration: 0.12, ease: "power2.out" }, 0.0);
+  tl.set("#still", { opacity: 0 }, 0.1);
+  tl.to("#flash", { opacity: 0, scale: 1.4, duration: 0.45, ease: "power2.out" }, 0.14);
+
+  // 1 · burst: products scatter in 3D
+  const spin = { mop: -16, fan: 14, gun: -22, lights: 18, tablet: -12, ball: 0, box: 0 };
+  Object.keys(O).forEach(function (k) {
+    const o = O[k];
+    tl.to(el[k], { x: o.d[0] - o.w / 2, y: o.d[1] - o.h / 2, z: o.d[2], rotationY: spin[k], duration: 1.0, ease: "power3.out" }, 0.08);
+  });
+  // gentle float (inner wrappers) through the whole segment
+  const fl = [["#mopi", 0.0], ["#fani", 0.5], ["#guni", 0.9], ["#lightsi", 0.3], ["#tableti", 0.7], ["#balli", 0.2]];
+  fl.forEach(function (f, i) {
+    tl.fromTo(f[0], { y: -10, rotationZ: -2 }, { y: 12, rotationZ: 2, duration: 1.15 + i * 0.08, ease: "sine.inOut", repeat: 6, yoyo: true }, f[1] * 0.4);
+  });
+  // slow 3D sway after the burst
+  const sw = [["#mop", -16, 10], ["#fan", 14, -12], ["#gun", -22, 8], ["#lights", 18, -10], ["#tablet", -12, 14]];
+  sw.forEach(function (s, i) {
+    tl.fromTo(s[0], { rotationY: s[1] }, { rotationY: s[2], duration: 2.4 + i * 0.2, ease: "sine.inOut", repeat: 2, yoyo: true }, 1.08);
+  });
+  tl.to("#world", { z: -60, duration: 1.0, ease: "power2.out" }, 0.1);
+
+  // 2 · headline leaves for the product tour
+  tl.to(["#h1", "#h2"], { opacity: 0, y: -30, duration: 0.3, ease: "power2.in", stagger: 0.05 }, 1.05);
+
+  // 3 · camera tour: center product, scale S
+  function cam(k, S, yc) {
+    const d = O[k].d;
+    const tz = P - P / S - d[2];
+    return { x: 540 - d[0], y: 960 - d[1] + (yc - 960) / S, z: tz };
+  }
+  const tour = [["lights", 1.55, 880], ["tablet", 1.5, 860], ["gun", 1.6, 900], ["fan", 1.45, 880], ["mop", 1.45, 880]];
+  const dim = { lights: "#lightsi", tablet: "#tableti", gun: "#guni", fan: "#fani", mop: "#mopi" };
+  tour.forEach(function (t, i) {
+    const t0 = 1.2 + i * 1.0;
+    tl.to("#world", Object.assign(cam(t[0], t[1], t[2]), { duration: 0.6, ease: "power3.inOut" }), t0);
+    tl.fromTo("#spot", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }, t0 + 0.35);
+    tl.to("#spot", { opacity: 0, duration: 0.25 }, t0 + 0.85);
+    const lb = document.getElementById("lb" + i);
+    tl.fromTo(lb, { opacity: 0, y: 40, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "power3.out" }, t0 + 0.42);
+    tl.to(lb, { opacity: 0, y: -20, duration: 0.2, ease: "power2.in" }, t0 + 0.88);
+  });
+  // depth of field: others dim while one is in focus
+  ["#lightsi", "#tableti", "#guni", "#fani", "#mopi"].forEach(function (s) {
+    tl.to(s, { opacity: 0.55, duration: 0.3 }, 1.25);
+  });
+  tour.forEach(function (t, i) {
+    const t0 = 1.2 + i * 1.0;
+    tl.to(dim[t[0]], { opacity: 1, duration: 0.3 }, t0 + 0.2);
+    tl.to(dim[t[0]], { opacity: 0.55, duration: 0.3 }, t0 + 0.95);
+  });
+
+  // 4 · pull back wide + "al mejor precio"
+  tl.to("#world", { x: 0, y: 140, z: -380, duration: 0.8, ease: "power3.inOut" }, 6.2);
+  tl.to(["#lightsi", "#tableti", "#guni", "#fani", "#mopi"], { opacity: 1, duration: 0.4 }, 6.3);
+  tl.fromTo("#h1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out", immediateRender: false }, 6.45);
+  tl.fromTo("#h2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out", immediateRender: false }, 6.62);
+  tl.fromTo("#h3w", { opacity: 0, scale: 1.35, y: 10 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: "back.out(2)" }, 6.92);
+  tl.to("#ul", { scaleX: 1, duration: 0.4, ease: "power3.out" }, 7.12);
+  tl.fromTo("#shi", { x: 0 }, { x: 900, duration: 0.6, ease: "power2.inOut" }, 7.15);
+
+  // 5 · gold sphere fills the screen (same transition as the original)
+  tl.to("#ball", { x: 540 - 115, y: 1150 - 115, z: 200, duration: 0.35, ease: "power2.inOut" }, 7.5);
+  tl.to("#ball", { scale: 14, duration: 0.42, ease: "power2.in" }, 7.72);
+  tl.to("#endgold", { opacity: 1, duration: 0.1 }, 8.05);
+
+  window.__timelines = window.__timelines || {};
+  window.__timelines["main"] = tl;
+</script>
+</body>
+</html>
