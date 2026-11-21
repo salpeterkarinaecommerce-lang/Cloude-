@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:13px
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--sel);outline-offset:2px}
-#app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px;
+#app{height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:8px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0}
 
@@ -44,6 +44,7 @@ button{cursor:pointer}
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.02em;font-size:15px}
 .rec{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
 .ptitle{display:flex;align-items:center;gap:8px;flex:1;min-width:220px}
+#selVersion{max-width:46%}
 #inTitulo{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:8px;padding:6px 8px;font-weight:700;font-size:15px}
 #inTitulo:hover{border-color:var(--line)} #inTitulo:focus{border-color:var(--sel);background:var(--panel)}
 select,input[type=text],input[type=number],textarea{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 7px;min-width:0}
@@ -460,8 +461,9 @@ function onMeta(){
 }
 function fitCanvas(){const w=$('#cwrap'),cw=w.clientWidth-20,ch=w.clientHeight-20;if(cw<=0||ch<=0)return;const s=Math.min(cw/cv.width,ch/cv.height);cv.style.width=Math.floor(cv.width*s)+'px';cv.style.height=Math.floor(cv.height*s)+'px'}
 new ResizeObserver(fitCanvas).observe($('#cwrap'));
-let ac=null,master=null,vidGain=null,live=[];
-function ensureAC(){if(ac)return ac;ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.connect(ac.destination);try{const src=ac.createMediaElementSource(vid);vidGain=ac.createGain();src.connect(vidGain);vidGain.connect(master)}catch(e){vidGain=null}return ac}
+let ac=null,master=null,salida=null,vidGain=null,live=[];
+function limitador(){const pre=ac.createGain();pre.gain.value=0.5;const ws=ac.createWaveShaper();const n=4096,cur=new Float32Array(n);for(let i=0;i<n;i++){const v=(i/(n-1)*2-1)*2,a=Math.abs(v);cur[i]=Math.sign(v)*(a<0.6?a:0.6+0.27*Math.tanh((a-0.6)/0.27))}ws.curve=cur;ws.oversample='4x';pre.connect(ws);return{entrada:pre,ws}}
+function ensureAC(){if(ac)return ac;ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();salida=limitador();master.connect(salida.entrada);salida.ws.connect(ac.destination);try{const src=ac.createMediaElementSource(vid);vidGain=ac.createGain();src.connect(vidGain);vidGain.connect(master)}catch(e){vidGain=null}return ac}
 function vidVol(T){const a=S.E.audio;if(a.mute)return 0;let v=a.vol;const tot=dur();if(a.fadeIn>0&&T<a.fadeIn)v*=T/a.fadeIn;if(a.fadeOut>0&&T>tot-a.fadeOut)v*=Math.max(0,(tot-T)/a.fadeOut);return v}
 function applyVol(T){const v=vidVol(T);if(vidGain)vidGain.gain.value=v;else vid.volume=clamp(v,0,1)}
 function stopAudio(){live.forEach(n=>{try{n.stop()}catch{}});live=[]}
@@ -501,7 +503,7 @@ function filt(oc,dest,type,f,q=1){const b=oc.createBiquadFilter();b.type=type;b.
 function sweepNoise(oc,o,type,f0,f1,f2,d,peakAt,peak,q=1.2){const b=filt(oc,o,type,f0,q);b.frequency.setValueAtTime(f0,0);b.frequency.exponentialRampToValueAtTime(f1,peakAt);if(f2)b.frequency.exponentialRampToValueAtTime(f2,d);const g=gn(oc,b,0);g.gain.setValueAtTime(0.0001,0);g.gain.exponentialRampToValueAtTime(peak,peakAt);g.gain.exponentialRampToValueAtTime(0.0001,d);noise(oc,0,d,g)}
 function musica(oc,o,c){
   const spb=60/c.bpm,st=spb/4,bars=8,N=bars*16;
-  const comp=oc.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;comp.attack.value=0.005;comp.release.value=0.15;comp.connect(o);
+  const comp=gn(oc,o,0.7);
   const bus=gn(oc,comp,0.9);const dl=oc.createDelay(2);dl.delayTime.value=spb*0.75;const fb=gn(oc,dl,0.35);dl.connect(fb);const wet=gn(oc,comp,0.22);dl.connect(wet);const send=gn(oc,dl,0.6);
   const K=t=>{tone(oc,bus,'sine',150,42,t,0.32,0.95,0.002);const lp=filt(oc,bus,'lowpass',2500);const g=gn(oc,lp,0);env(g,t,0.001,0.22,0.02);noise(oc,t,0.03,g)};
   const Sn=t=>{const hp=filt(oc,bus,'highpass',1300);const g=gn(oc,hp,0);env(g,t,0.002,0.42,0.17);noise(oc,t,0.2,g);tone(oc,bus,'triangle',200,150,t,0.09,0.26);const gs=gn(oc,send,0);env(gs,t,0.002,0.12,0.15);noise(oc,t,0.15,gs)};
@@ -559,12 +561,13 @@ const SONIDOS=[
   {id:'m-house',nombre:'House',cat:'Música',dur:mlen('house'),fn:(oc,o)=>musica(oc,o,MUS.house)}
 ];
 const sonido=id=>SONIDOS.find(s=>s.id===id);
+function nivelar(buf,obj){let pk=0;for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c);for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>pk)pk=a}}if(pk>0){const g=obj/pk;for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c);for(let i=0;i<d.length;i++)d[i]*=g}}return buf}
 const bufCache=new Map();
 function getBuffer(ref){
   const key=ref.lib?'lib:'+ref.lib:'url:'+(ref.assetId||ref.url);
   if(bufCache.has(key))return bufCache.get(key);
   const p=(async()=>{
-    if(ref.lib){const d=sonido(ref.lib);if(!d)throw new Error('sin sonido');const sr=44100;const oc=new OfflineAudioContext(2,Math.ceil(d.dur*sr),sr);d.fn(oc,oc.destination);return await oc.startRendering()}
+    if(ref.lib){const d=sonido(ref.lib);if(!d)throw new Error('sin sonido');const sr=44100;const oc=new OfflineAudioContext(2,Math.ceil(d.dur*sr),sr);d.fn(oc,oc.destination);return nivelar(await oc.startRendering(),d.cat==='Música'?0.79:0.89)}
     const r=await fetch(ref.assetId?'/_blob/'+ref.assetId:ref.url);const ab=await r.arrayBuffer();const oc=new OfflineAudioContext(2,44100,44100);return await oc.decodeAudioData(ab)})();
   bufCache.set(key,p);p.catch(()=>bufCache.delete(key));return p;
 }
@@ -572,7 +575,7 @@ let oyendo=null;
 async function oir(id,btn){ensureAC();ac.resume();if(oyendo){try{oyendo.src.stop()}catch{}oyendo.btn?.classList.remove('playing');const same=oyendo.id===id;oyendo=null;if(same)return}
   btn?.classList.add('playing');const ref=id.startsWith('url:')?S.misAudios.find(a=>'url:'+a.key===id)?.ref:{lib:id};if(!ref)return;
   const b=await getBuffer(ref).catch(()=>null);if(!b){btn?.classList.remove('playing');toast('No se pudo cargar ese sonido.');return}
-  const src=ac.createBufferSource();src.buffer=b;src.connect(ac.destination);src.start();const st=Math.min(b.duration,12);src.stop(ac.currentTime+st);const me={id,src,btn};oyendo=me;src.onended=()=>{btn?.classList.remove('playing');if(oyendo===me)oyendo=null}}
+  const src=ac.createBufferSource();src.buffer=b;src.connect(salida.entrada);src.start();const st=Math.min(b.duration,12);src.stop(ac.currentTime+st);const me={id,src,btn};oyendo=me;src.onended=()=>{btn?.classList.remove('playing');if(oyendo===me)oyendo=null}}
 S.misAudios=[];
 
 /* ============ historial y guardado ============ */
@@ -1007,7 +1010,7 @@ async function exportar(){
   let cancel=false;$('#expCancel').onclick=()=>{cancel=true};
   S.exporting=true;
   try{await Promise.race([document.fonts?.ready,new Promise(r=>setTimeout(r,3000))]);ensureFonts();await new Promise(r=>setTimeout(r,300));
-    const dest=ac.createMediaStreamDestination();master.disconnect();master.connect(dest);
+    const dest=ac.createMediaStreamDestination();salida.ws.disconnect();salida.ws.connect(dest);
     const vs=ec.captureStream(E.calidad.fps);const stream=new MediaStream([...vs.getVideoTracks(),...dest.stream.getAudioTracks()]);
     const rec=new MediaRecorder(stream,{mimeType:mime.type,videoBitsPerSecond:bps(E.calidad),audioBitsPerSecond:192000});const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
     const L=layout();$('#expMsg').textContent='Grabando… dejá esta pestaña visible.';
@@ -1031,7 +1034,7 @@ async function exportar(){
     $('#expSave').onclick=guardarExport;$('#expClose').onclick=()=>{$('#modal').hidden=true};
     guardarExport();
   }catch(err){$('#modal').hidden=true;if(err?.message!=='cancel')toast('La exportación falló: '+esc(err?.message||err));else toast('Exportación cancelada.')}
-  finally{S.exporting=false;stopAudio();vid.pause();try{master.disconnect();master.connect(ac.destination);await ac.resume()}catch{}S.needDraw=true;syncVideo(S.T)}
+  finally{S.exporting=false;stopAudio();vid.pause();try{salida.ws.disconnect();salida.ws.connect(ac.destination);await ac.resume()}catch{}S.needDraw=true;syncVideo(S.T)}
 }
 async function guardarExport(){if(!ultimoExport)return;const msg=$('#expMsg');
   if(!S.downloads){msg.innerHTML+='<br>Esta vista no permite descargar archivos. Abrí la página en claude.ai.';return}
