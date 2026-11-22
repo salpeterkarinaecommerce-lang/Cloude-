@@ -1,0 +1,87 @@
+{% from "_macros.html.j2" import kpi, grafico, publicaciones %}
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>{{ cliente.nombre }} · {{ periodo.titulo }}</title>
+<style>{% include "base.css" %} :root { --marca: {{ cliente.color }}; }</style></head>
+<body>
+
+<div class="portada">
+  <div>
+    <h1>{{ cliente.nombre }}</h1>
+    <div class="sub">{{ periodo.titulo }}</div>
+  </div>
+  {% if cliente.logo_url %}<img src="{{ cliente.logo_url }}" alt="Logo">{% endif %}
+</div>
+
+<h2>Resumen</h2>
+<div class="caja">
+  {% if ia.cliente %}<p>{{ ia.cliente }}</p>{% else %}
+  <ul>{% for linea in analisis.resumen_cliente %}<li>{{ linea }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% if analisis.destacados_cliente %}
+<h3>Lo más destacado</h3>
+<ul>{% for d in analisis.destacados_cliente %}<li>{{ d }}</li>{% endfor %}</ul>
+{% endif %}
+
+{% if m.ads %}{% set a = m.ads.actual %}{% set v = m.ads.var %}
+<h2>Publicidad en Meta (Facebook e Instagram)</h2>
+<div class="kpis">
+  {{ kpi("Inversión", a.gasto|moneda(cliente.moneda), v.gasto, True, "Lo que se invirtió en anuncios.") }}
+  {% if cliente.objetivo != "reconocimiento" %}
+  {{ kpi(m.ads.resultado_plural|capitalize, a.resultados|num, v.resultados, True, "Resultados conseguidos por los anuncios.") }}
+  {{ kpi("Costo por " ~ m.ads.resultado_singular, a.cpa|moneda(cliente.moneda), v.cpa, False, "Cuánto costó, en promedio, cada resultado. Más bajo es mejor.") }}
+  {% endif %}
+  {% if a.roas %}{{ kpi("Retorno (ROAS)", a.roas|num(2) ~ "x", v.roas, True, "Ventas generadas por cada $1 invertido.") }}{% endif %}
+  {{ kpi("Personas alcanzadas", a.alcance|compacto, v.alcance, True, "Personas distintas que vieron los anuncios.") }}
+  {{ kpi("Clics al sitio / perfil", a.clics_link|compacto, v.clics_link, True, "Personas que hicieron clic para saber más.") }}
+</div>
+{{ grafico(graficos.gasto_diario, "Inversión por día") }}
+{% if graficos.resultados_diarios %}{{ grafico(graficos.resultados_diarios, m.ads.resultado_plural|capitalize ~ " por día") }}{% endif %}
+
+<h3>Campañas</h3>
+<table>
+  <tr><th>Campaña</th><th class="n">Inversión</th>{% if cliente.objetivo != "reconocimiento" %}<th class="n">{{ m.ads.resultado_plural|capitalize }}</th><th class="n">Costo c/u</th>{% endif %}<th class="n">Alcance</th></tr>
+  {% for c in m.ads.campanas[:6] %}
+  <tr><td>{{ c.nombre }}</td><td class="n">{{ c.gasto|moneda(cliente.moneda) }}</td>
+  {% if cliente.objetivo != "reconocimiento" %}<td class="n">{{ c.resultados|num }}</td><td class="n">{{ c.cpa|moneda(cliente.moneda) }}</td>{% endif %}
+  <td class="n">{{ c.alcance|compacto }}</td></tr>
+  {% endfor %}
+</table>
+
+{% set mejores = m.ads.anuncios|selectattr("resultados")|list %}
+{% if mejores %}
+<h3>Anuncios con mejores resultados</h3>
+<table>
+  <tr><th>Anuncio</th><th class="n">{{ m.ads.resultado_plural|capitalize }}</th><th class="n">Costo c/u</th></tr>
+  {% for x in (mejores|sort(attribute="resultados", reverse=True))[:5] %}
+  <tr><td>{{ x.nombre }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(cliente.moneda) }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endif %}
+
+{% for red in ["instagram", "facebook"] %}{% set o = m[red] %}{% if o %}
+<h2 {% if loop.first and m.ads %}class="salto"{% endif %}>{{ "Instagram" if red == "instagram" else "Facebook" }} orgánico · {{ o.nombre }}</h2>
+<div class="kpis">
+  {% if o.seguidores is not none %}{{ kpi("Seguidores", o.seguidores|num, None, True, "Total al cierre del período.") }}{% endif %}
+  {% if o.nuevos_seguidores is not none %}{{ kpi("Seguidores nuevos", o.nuevos_seguidores|num, o.var.nuevos_seguidores) }}{% endif %}
+  {% if o.alcance is not none %}{{ kpi("Alcance", o.alcance|compacto, o.var.alcance, True, "Cuentas que vieron tu contenido.") }}{% endif %}
+  {% if o.interacciones is not none %}{{ kpi("Interacciones", o.interacciones|compacto, o.var.interacciones, True, "Me gusta, comentarios, compartidos y guardados.") }}{% endif %}
+  {{ kpi("Publicaciones", o.cantidad_publicaciones|num) }}
+</div>
+{% if o.top %}<h3>Publicaciones que mejor funcionaron</h3>{{ publicaciones(o.top, red) }}{% endif %}
+{% endif %}{% endfor %}
+
+<h2>Próximos pasos</h2>
+<div class="caja"><ul>{% for p in analisis.proximos_pasos_cliente %}<li>{{ p }}</li>{% endfor %}</ul></div>
+
+<h3>¿Qué significa cada término?</h3>
+<dl class="glosario">
+  <dt>Alcance</dt><dd>Cantidad de personas distintas que vieron el contenido.</dd>
+  <dt>Frecuencia</dt><dd>Cuántas veces, en promedio, cada persona vio un anuncio.</dd>
+  <dt>Clics</dt><dd>Personas que tocaron el anuncio para ir al sitio, WhatsApp o perfil.</dd>
+  {% if cliente.objetivo != "reconocimiento" %}<dt>Costo por {{ m.ads.resultado_singular if m.ads else "resultado" }}</dt><dd>Inversión dividida por la cantidad de resultados. Cuanto más bajo, mejor.</dd>{% endif %}
+  {% if cliente.objetivo == "ventas" %}<dt>ROAS</dt><dd>Retorno de la inversión publicitaria: si es 4x, por cada $1 invertido se vendieron $4.</dd>{% endif %}
+  <dt>Interacciones</dt><dd>Me gusta, comentarios, compartidos y guardados.</dd>
+</dl>
+<p class="nota">Datos obtenidos de Meta (Facebook e Instagram). Las conversiones se atribuyen según la configuración estándar de Meta (7 días clic / 1 día visualización).</p>
+</body></html>

@@ -1,0 +1,12 @@
+# Cliente de EJEMPLO (solo se usa con --demo).
+nombre: Estudio Sur Estética
+activo: true
+rubro: Centro de estética
+objetivo: mensajes
+moneda: ARS
+ad_account_id: act_9876543210
+instagram_id: "17841400000000001"
+presupuesto_mensual: 600000
+cpa_objetivo: 1800
+frecuencias: [semanal, mensual]
+color: "#0D9488"

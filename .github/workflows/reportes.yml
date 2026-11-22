@@ -1,0 +1,77 @@
+name: Reportes Meta
+
+on:
+  schedule:
+    - cron: "17 11 * * 1"   # todos los lunes 08:17 (hora Argentina) → reporte semanal
+    - cron: "43 11 1 * *"   # día 1 de cada mes 08:43 (hora Argentina) → reporte mensual
+  workflow_dispatch:
+    inputs:
+      periodo:
+        description: Período
+        type: choice
+        options: [semanal, mensual]
+        default: semanal
+      demo:
+        description: Usar datos de prueba (no necesita token de Meta)
+        type: boolean
+        default: false
+      cliente:
+        description: Solo este cliente (nombre del archivo sin .yaml). Vacío = todos
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reportes-meta
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+          sudo apt-get install -y fonts-noto-color-emoji >/dev/null
+      - name: Generar reportes
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_API_VERSION: ${{ vars.META_API_VERSION }}
+          PANEL_PASSWORD: ${{ secrets.PANEL_PASSWORD }}
+          PANEL_URL: ${{ vars.PANEL_URL }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          REPORT_TO: ${{ secrets.REPORT_TO }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ZONA_HORARIA: America/Argentina/Buenos_Aires
+          CLIENTE: ${{ inputs.cliente }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.schedule }}" = "43 11 1 * *" ]; then PERIODO=mensual; else PERIODO=semanal; fi
+            ARGS="--periodo $PERIODO"
+          else
+            ARGS="--periodo ${{ inputs.periodo }}"
+            [ "${{ inputs.demo }}" = "true" ] && ARGS="$ARGS --demo"
+            [ -n "$CLIENTE" ] && ARGS="$ARGS --cliente $CLIENTE"
+          fi
+          python -m reportes_meta generar $ARGS
+      - name: Publicar panel (cifrado) en GitHub Pages
+        if: always()
+        run: |
+          git config user.name "reportes-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ 2>/dev/null || true
+          if git diff --cached --quiet; then echo "Panel sin cambios"; exit 0; fi
+          git commit -m "Panel actualizado ($(date +%F))"
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 5; done
+      # Los PDF NO se suben como artefactos: el repo es público y contienen datos de clientes.
+      # Te llegan solo por mail.

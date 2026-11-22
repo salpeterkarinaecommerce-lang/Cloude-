@@ -1,0 +1,100 @@
+{% from "_macros.html.j2" import grafico %}
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel · {{ periodo.titulo }}</title>
+<style>{% include "base.css" %}
+  body { background: #f3f4f6; font-size: 13px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  .portada { background: #111827; }
+  .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .tabla-scroll { overflow-x: auto; }
+  details > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary h2 { border: 0; margin: 0; padding: 0; font-size: 16px; }
+  details[open] > summary { margin-bottom: 10px; }
+  .meta { color: var(--texto-3); font-size: 12px; }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .nav a { color: #fff; opacity: .85; font-size: 12px; }
+  @media (max-width: 640px) { .dos-col { grid-template-columns: 1fr; } .kpi .val { font-size: 16px; } }
+</style></head>
+<body><div class="wrap">
+<div class="portada">
+  <div>
+    <h1>Panel de clientes</h1>
+    <div class="sub">{{ periodo.titulo }} · generado el {{ generado }}</div>
+    <div class="nav"><a href="semanal.html">Último semanal</a><a href="mensual.html">Último mensual</a><a href="historial.html">Historial</a></div>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">Resumen de todas las cuentas</h2>
+  <div class="tabla-scroll"><table>
+    <tr><th>Cliente</th><th>Estado</th><th class="n">Inversión</th><th class="n">Var.</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CPA obj.</th><th class="n">ROAS</th><th class="n">Alcance org.</th><th class="n">Alertas</th></tr>
+    {% for r in reportes %}{% set a = r.m.ads.actual if r.m.ads else None %}
+    <tr>
+      <td><a href="#{{ r.cliente.slug }}">{{ r.cliente.nombre }}</a></td>
+      <td><span class="estado {{ r.analisis.estado }}" style="padding:0;font-size:12px">{{ r.analisis.estado_texto }}</span></td>
+      <td class="n">{{ a.gasto|moneda(r.cliente.moneda) if a else "—" }}</td>
+      <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.gasto) }}">{{ r.m.ads.var.gasto|var }}</span>{% endif %}</td>
+      <td class="n">{{ a.resultados|num if a else "—" }}</td>
+      <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.cpa, False) }}">{{ a.cpa|moneda(r.cliente.moneda) }}</span>{% else %}—{% endif %}</td>
+      <td class="n">{{ r.cliente.cpa_objetivo|moneda(r.cliente.moneda) if r.cliente.cpa_objetivo else "—" }}</td>
+      <td class="n">{{ a.roas|num(2) if a and a.roas else "—" }}</td>
+      <td class="n">{{ ((r.m.instagram.alcance or 0) + (r.m.facebook.alcance or 0) if (r.m.instagram or r.m.facebook) else None)|compacto }}</td>
+      <td class="n">{{ r.analisis.hallazgos|selectattr("nivel", "in", ["critico", "alerta"])|list|length }}</td>
+    </tr>{% endfor %}
+  </table></div>
+</div>
+
+{% for r in reportes %}{% set mon = r.cliente.moneda %}
+<div class="tarjeta" id="{{ r.cliente.slug }}">
+<details {% if r.analisis.estado in ["rojo", "amarillo"] %}open{% endif %}>
+  <summary><h2>{{ r.cliente.nombre }}</h2><span class="estado {{ r.analisis.estado }}">{{ r.analisis.estado_texto }}</span>
+    <span class="meta">{{ r.cliente.objetivo_legible }}</span></summary>
+  {% if r.ia.interno %}<div class="caja"><b>Lectura rápida (IA):</b> {{ r.ia.interno }}</div>{% endif %}
+  {% if r.m.ads %}{% set a = r.m.ads.actual %}{% set v = r.m.ads.var %}
+  <div class="kpis">
+    <div class="kpi"><div class="etq">Inversión</div><div class="val">{{ a.gasto|moneda(mon) }}</div><div class="var {{ clase_var(v.gasto) }}">{{ v.gasto|var }}</div></div>
+    <div class="kpi"><div class="etq">{{ r.m.ads.resultado_plural }}</div><div class="val">{{ a.resultados|num }}</div><div class="var {{ clase_var(v.resultados) }}">{{ v.resultados|var }}</div></div>
+    <div class="kpi"><div class="etq">CPA</div><div class="val">{{ a.cpa|moneda(mon) }}</div><div class="var {{ clase_var(v.cpa, False) }}">{{ v.cpa|var }}</div></div>
+    {% if a.roas %}<div class="kpi"><div class="etq">ROAS</div><div class="val">{{ a.roas|num(2) }}</div><div class="var {{ clase_var(v.roas) }}">{{ v.roas|var }}</div></div>{% endif %}
+    <div class="kpi"><div class="etq">CTR enlace</div><div class="val">{{ a.ctr|pct(2) }}</div><div class="var {{ clase_var(v.ctr) }}">{{ v.ctr|var }}</div></div>
+    <div class="kpi"><div class="etq">CPM</div><div class="val">{{ a.cpm|moneda(mon) }}</div><div class="var {{ clase_var(v.cpm, False) }}">{{ v.cpm|var }}</div></div>
+    <div class="kpi"><div class="etq">Frecuencia</div><div class="val">{{ a.frecuencia|num(2) }}</div><div class="var {{ clase_var(v.frecuencia, False) }}">{{ v.frecuencia|var }}</div></div>
+  </div>
+  <div class="dos-col">
+    {{ grafico(r.graficos.gasto_diario, "Inversión diaria") }}
+    {{ grafico(r.graficos.cpa_diario, "CPA diario") }}
+  </div>
+  {% endif %}
+  <h3>Diagnóstico y acciones</h3>
+  {% for h in r.analisis.hallazgos %}
+  <div class="hallazgo {{ h.nivel }}">
+    <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
+    <div class="d">{{ h.detalle }}</div>
+    {% if h.accion %}<div class="a"><b>Acción:</b> {{ h.accion }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% if r.m.ads %}
+  <h3>Campañas</h3>
+  <div class="tabla-scroll"><table>
+    <tr><th>Campaña</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">CTR</th><th class="n">Frec.</th></tr>
+    {% for c in r.m.ads.campanas %}<tr><td>{{ c.nombre }}</td><td class="n">{{ c.gasto|moneda(mon) }}</td><td class="n">{{ c.resultados|num }}</td>
+      <td class="n">{{ c.cpa|moneda(mon) }}</td><td class="n"><span class="var {{ clase_var(c.var_cpa, False) }}">{{ c.var_cpa|var }}</span></td>
+      <td class="n">{{ c.ctr|pct(2) }}</td><td class="n">{{ c.frecuencia|num(1) }}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+  {% for red in ["instagram", "facebook"] %}{% set o = r.m[red] %}{% if o %}
+  <h3>{{ red|capitalize }} · {{ o.nombre }}</h3>
+  <div class="kpis">
+    {% for k, n in [("alcance","Alcance"),("interacciones","Interacciones"),("nuevos_seguidores","Seguidores nuevos")] %}{% if o[k] is not none %}
+    <div class="kpi"><div class="etq">{{ n }}</div><div class="val">{{ o[k]|compacto }}</div><div class="var {{ clase_var(o.var[k]) }}">{{ o.var[k]|var }}</div></div>{% endif %}{% endfor %}
+    <div class="kpi"><div class="etq">Engagement</div><div class="val">{{ o.engagement|pct(2) }}</div><div class="var {{ clase_var(o.var.engagement) }}">{{ o.var.engagement|var }}</div></div>
+    <div class="kpi"><div class="etq">Publicaciones</div><div class="val">{{ o.cantidad_publicaciones }}</div></div>
+  </div>
+  {% endif %}{% endfor %}
+  {% if r.m.avisos %}<p class="nota">Avisos: {{ r.m.avisos|join(" · ") }}</p>{% endif %}
+</details>
+</div>
+{% endfor %}
+</div></body></html>

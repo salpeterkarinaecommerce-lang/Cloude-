@@ -1,0 +1,27 @@
+{% macro kpi(etiqueta, valor, variacion=None, bueno_si_sube=True, explicacion='') -%}
+<div class="kpi">
+  <div class="etq">{{ etiqueta }}</div>
+  <div class="val">{{ valor }}</div>
+  {% if variacion is not none %}<div class="var {{ clase_var(variacion, bueno_si_sube) }}">{{ variacion|var }} vs anterior</div>{% endif %}
+  {% if explicacion %}<div class="exp">{{ explicacion }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro grafico(svg, titulo) -%}
+{% if svg %}<div class="grafico"><div class="tit">{{ titulo }}</div>{{ svg|safe }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro publicaciones(lista, red) -%}
+<div class="posts">
+{% for p in lista %}
+  <div class="post">
+    {% if p.imagen %}<img src="{{ p.imagen }}" alt="">{% else %}<div class="ph">{{ p.tipo|tipo }}</div>{% endif %}
+    <div class="cuerpo">
+      <div class="txt">{{ p.texto or 'Sin texto' }}</div>
+      <div><b>{{ p.interacciones|num }}</b> interacciones{% if p.alcance %} · {{ p.alcance|compacto }} alcance{% endif %}</div>
+      {% if p.dt %}<div class="nota">{{ p.dt.day }}/{{ p.dt.month }} · {{ p.tipo|tipo }}</div>{% endif %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+{%- endmacro %}

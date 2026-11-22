@@ -1,0 +1,116 @@
+{% from "_macros.html.j2" import kpi, grafico %}
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>INTERNO · {{ cliente.nombre }} · {{ periodo.titulo }}</title>
+<style>{% include "base.css" %} :root { --marca: #111827; }</style></head>
+<body>
+{% set mon = cliente.moneda %}
+<div class="portada">
+  <div>
+    <h1>{{ cliente.nombre }} · Diagnóstico interno</h1>
+    <div class="sub">{{ periodo.titulo }} · Objetivo: {{ cliente.objetivo_legible }}
+      {% if cliente.cpa_objetivo %} · CPA obj. {{ cliente.cpa_objetivo|moneda(mon) }}{% endif %}
+      {% if cliente.roas_objetivo %} · ROAS obj. {{ cliente.roas_objetivo|num(1) }}{% endif %}
+      {% if cliente.presupuesto_mensual %} · Ppto. {{ cliente.presupuesto_mensual|moneda(mon) }}/mes{% endif %}</div>
+  </div>
+  <span class="estado {{ analisis.estado }}">{{ analisis.estado_texto }}</span>
+</div>
+
+{% if ia.interno %}<div class="caja"><b>Lectura rápida (IA):</b> {{ ia.interno }}</div>{% endif %}
+
+<h2>Qué hacer esta {{ "semana" if periodo.tipo == "semanal" else "vez" }}</h2>
+{% for h in analisis.hallazgos if h.nivel != "ok" %}
+<div class="hallazgo {{ h.nivel }}">
+  <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
+  <div class="d">{{ h.detalle }}</div>
+  {% if h.accion %}<div class="a"><b>Acción:</b> {{ h.accion }}</div>{% endif %}
+</div>
+{% else %}<p>Sin alertas. Todo en línea con los objetivos.</p>{% endfor %}
+{% set oks = analisis.hallazgos|selectattr("nivel", "equalto", "ok")|list %}
+{% if oks %}<h3>Lo que está funcionando</h3><ul>{% for h in oks %}<li><b>{{ h.titulo }}.</b> {{ h.detalle }}</li>{% endfor %}</ul>{% endif %}
+
+{% if m.ads %}{% set a = m.ads.actual %}{% set p = m.ads.anterior %}{% set v = m.ads.var %}
+<h2>Meta Ads · métricas clave</h2>
+<table>
+  <tr><th>Métrica</th><th class="n">Actual</th><th class="n">Anterior</th><th class="n">Var.</th><th>Lectura</th></tr>
+  {% set filas = [
+    ("Inversión", a.gasto|moneda(mon), p.gasto|moneda(mon), v.gasto, True, ""),
+    ("Resultados (" ~ m.ads.resultado_plural ~ ")", a.resultados|num, p.resultados|num, v.resultados, True, ""),
+    ("CPA / costo por resultado", a.cpa|moneda(mon), p.cpa|moneda(mon), v.cpa, False, "vs objetivo " ~ (cliente.cpa_objetivo|moneda(mon) if cliente.cpa_objetivo else "—")),
+    ("ROAS", (a.roas|num(2)) if a.roas else "—", (p.roas|num(2)) if p.roas else "—", v.roas, True, ""),
+    ("Valor de conversiones", a.valor|moneda(mon), p.valor|moneda(mon), v.valor, True, ""),
+    ("CPM", a.cpm|moneda(mon), p.cpm|moneda(mon), v.cpm, False, "costo por mil impresiones"),
+    ("CTR de enlace", a.ctr|pct(2), p.ctr|pct(2), v.ctr, True, "<0,8 % bajo · >1,5 % bueno"),
+    ("CPC de enlace", a.cpc|moneda(mon), p.cpc|moneda(mon), v.cpc, False, ""),
+    ("Tasa de conversión (clic→resultado)", a.tasa_conversion|pct(2), p.tasa_conversion|pct(2), v.tasa_conversion, True, "cae = problema de landing/oferta"),
+    ("Frecuencia", a.frecuencia|num(2), p.frecuencia|num(2), v.frecuencia, False, ">3 semanal = saturación"),
+    ("Alcance", a.alcance|num, p.alcance|num, v.alcance, True, ""),
+    ("Impresiones", a.impresiones|num, p.impresiones|num, v.impresiones, True, ""),
+    ("Clics en el enlace", a.clics_link|num, p.clics_link|num, v.clics_link, True, ""),
+  ] %}
+  {% for nombre, act, ant, var_, sube, nota in filas %}
+  <tr><td>{{ nombre }}</td><td class="n">{{ act }}</td><td class="n">{{ ant }}</td>
+      <td class="n"><span class="var {{ clase_var(var_, sube) }}">{{ var_|var }}</span></td><td class="nota">{{ nota }}</td></tr>
+  {% endfor %}
+</table>
+
+<div class="dos-col">
+  {{ grafico(graficos.gasto_diario, "Inversión diaria") }}
+  {% if graficos.cpa_diario %}{{ grafico(graficos.cpa_diario, "CPA diario") }}{% endif %}
+</div>
+{{ grafico(graficos.campanas_gasto, "Distribución de la inversión por campaña") }}
+
+<h3>Campañas</h3>
+<table>
+  <tr><th>Campaña</th><th class="n">Inversión</th><th class="n">% ppto</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">ROAS</th><th class="n">CTR</th><th class="n">CPM</th><th class="n">Frec.</th></tr>
+  {% for c in m.ads.campanas %}
+  <tr><td>{{ c.nombre }}</td><td class="n">{{ c.gasto|moneda(mon) }}</td><td class="n">{{ c.participacion|pct(0) }}</td>
+      <td class="n">{{ c.resultados|num }}</td><td class="n">{{ c.cpa|moneda(mon) }}</td>
+      <td class="n"><span class="var {{ clase_var(c.var_cpa, False) }}">{{ c.var_cpa|var }}</span></td>
+      <td class="n">{{ (c.roas|num(2)) if c.roas else "—" }}</td><td class="n">{{ c.ctr|pct(2) }}</td>
+      <td class="n">{{ c.cpm|moneda(mon) }}</td><td class="n">{{ c.frecuencia|num(1) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Anuncios (por inversión)</h3>
+<table>
+  <tr><th>Anuncio</th><th>Conjunto</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CTR</th><th class="n">Frec.</th><th>Señal</th></tr>
+  {% set ref = cliente.cpa_objetivo or a.cpa %}
+  {% for x in m.ads.anuncios[:25] %}
+  {% set senal = "" %}
+  {% if ref and x.gasto > 2 * ref and (x.resultados == 0 or (x.cpa or 0) > 2 * ref) %}{% set senal = "pausar" %}
+  {% elif ref and x.resultados >= 3 and x.cpa and x.cpa < 0.75 * ref %}{% set senal = "escalar" %}
+  {% elif (x.frecuencia or 0) > 4 %}{% set senal = "fatiga" %}{% endif %}
+  <tr><td>{{ x.nombre }}</td><td class="nota">{{ x.conjunto }}</td><td class="n">{{ x.gasto|moneda(mon) }}</td>
+      <td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td><td class="n">{{ x.ctr|pct(2) }}</td>
+      <td class="n">{{ x.frecuencia|num(1) }}</td>
+      <td>{% if senal %}<span class="chip {{ {'pausar':'critico','escalar':'oportunidad','fatiga':'alerta'}[senal] }}">{{ senal }}</span>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% for red in ["instagram", "facebook"] %}{% set o = m[red] %}{% if o %}
+<h2>{{ "Instagram" if red == "instagram" else "Facebook" }} · {{ o.nombre }}</h2>
+<table>
+  <tr><th>Métrica</th><th class="n">Actual</th><th class="n">Var.</th></tr>
+  {% for k, nombre in [("seguidores","Seguidores"),("nuevos_seguidores","Seguidores nuevos"),("alcance","Alcance"),("vistas","Visualizaciones"),("interacciones","Interacciones"),("cuentas_interactuaron","Cuentas que interactuaron"),("visitas_perfil","Visitas al perfil")] %}
+  {% if o[k] is not none %}<tr><td>{{ nombre }}</td><td class="n">{{ o[k]|num }}</td><td class="n"><span class="var {{ clase_var(o.var[k]) }}">{{ o.var[k]|var }}</span></td></tr>{% endif %}
+  {% endfor %}
+  <tr><td>Engagement (interacciones / alcance)</td><td class="n">{{ o.engagement|pct(2) }}</td><td class="n"><span class="var {{ clase_var(o.var.engagement) }}">{{ o.var.engagement|var }}</span></td></tr>
+  <tr><td>Publicaciones</td><td class="n">{{ o.cantidad_publicaciones }}</td><td></td></tr>
+</table>
+{{ grafico(graficos[red ~ "_formatos"], "Interacciones promedio por formato") }}
+{% if o.top %}
+<h3>Top publicaciones</h3>
+<table><tr><th>Publicación</th><th>Formato</th><th class="n">Interacciones</th><th class="n">Alcance</th><th class="n">Engagement</th></tr>
+{% for p in o.top + o.peores %}<tr><td>{% if p.link %}<a href="{{ p.link }}">{{ (p.texto or "Sin texto")[:70] }}</a>{% else %}{{ (p.texto or "Sin texto")[:70] }}{% endif %}{% if p in o.peores %} <span class="chip alerta">bajo</span>{% endif %}</td>
+<td>{{ p.tipo|tipo }}</td><td class="n">{{ p.interacciones|num }}</td><td class="n">{{ p.alcance|compacto if p.alcance else "—" }}</td><td class="n">{{ p.tasa|pct(1) if p.tasa else "—" }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endif %}{% endfor %}
+
+{% if m.avisos %}
+<h2>Avisos técnicos</h2>
+<ul class="nota">{% for x in m.avisos %}<li>{{ x }}</li>{% endfor %}</ul>
+{% endif %}
+{% if cliente.notas %}<h3>Notas del cliente</h3><p>{{ cliente.notas }}</p>{% endif %}
+</body></html>

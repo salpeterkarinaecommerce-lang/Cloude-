@@ -1,0 +1,99 @@
+name: ➕ Nuevo cliente (reportes Meta)
+description: Completá este formulario y el cliente queda agregado automáticamente al sistema de reportes.
+title: "[Nuevo cliente] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Completá los datos del cliente. Solo el **nombre** y el **objetivo** son obligatorios; lo demás podés cargarlo después editando `clientes/<cliente>.yaml`.
+        **Dónde encontrar los IDs:** Business Manager → Configuración del negocio → Cuentas publicitarias / Páginas / Cuentas de Instagram (el número aparece al seleccionar cada una).
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre del cliente
+      placeholder: Tienda Luna
+    validations:
+      required: true
+  - type: input
+    id: rubro
+    attributes:
+      label: Rubro
+      placeholder: Indumentaria femenina (e-commerce)
+  - type: dropdown
+    id: objetivo
+    attributes:
+      label: Objetivo principal
+      description: Define qué se cuenta como "resultado" y cómo se analizan las campañas.
+      options:
+        - ventas — compras en la web o tienda online
+        - leads — formularios / clientes potenciales
+        - mensajes — conversaciones por WhatsApp, Messenger o Instagram Direct
+        - trafico — visitas al sitio web
+        - reconocimiento — alcance y recordación de marca
+    validations:
+      required: true
+  - type: dropdown
+    id: moneda
+    attributes:
+      label: Moneda
+      description: La misma moneda que tiene la cuenta publicitaria.
+      options: [ARS, USD, EUR, UYU, CLP, MXN, COP, PEN, BRL, PYG]
+      default: 0
+  - type: input
+    id: ad_account_id
+    attributes:
+      label: ID de la cuenta publicitaria (vacío si no hace Ads)
+      placeholder: act_1234567890 o 1234567890
+  - type: input
+    id: page_id
+    attributes:
+      label: ID de la página de Facebook (vacío si no aplica)
+      placeholder: "111111111111111"
+  - type: input
+    id: instagram_id
+    attributes:
+      label: ID de Instagram Business (vacío si no aplica)
+      description: Es el ID numérico de la cuenta de Instagram conectada a la página (empieza con 1784...).
+      placeholder: "17841400000000000"
+  - type: input
+    id: presupuesto
+    attributes:
+      label: Presupuesto mensual de Ads
+      placeholder: "1500000"
+  - type: input
+    id: cpa
+    attributes:
+      label: CPA objetivo (costo máximo aceptable por venta / lead / mensaje)
+      placeholder: "9000"
+  - type: input
+    id: roas
+    attributes:
+      label: ROAS objetivo (solo si el objetivo es ventas)
+      placeholder: "4"
+  - type: input
+    id: ticket
+    attributes:
+      label: Ticket promedio (solo ventas)
+      placeholder: "32000"
+  - type: checkboxes
+    id: frecuencias
+    attributes:
+      label: Frecuencia de reportes
+      options:
+        - label: Semanal
+        - label: Mensual
+  - type: input
+    id: color
+    attributes:
+      label: Color de marca (HEX)
+      placeholder: "#DB2777"
+  - type: input
+    id: logo
+    attributes:
+      label: Logo (URL pública de la imagen)
+      placeholder: https://...
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas para el análisis
+      description: Contexto útil (estacionalidad, promos, stock, qué le importa al cliente).
