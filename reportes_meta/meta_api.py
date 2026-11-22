@@ -26,6 +26,8 @@ CAMPOS_INSIGHTS = [
     "spend", "impressions", "reach", "frequency", "clicks", "inline_link_clicks",
     "ctr", "inline_link_click_ctr", "cpc", "cpm", "actions", "action_values",
 ]
+# ThruPlays (video visto completo o 15 s). Las reproducciones de 3 s vienen en actions (video_view).
+CAMPOS_VIDEO = ["video_thruplay_watched_actions"]
 
 
 class ErrorMeta(RuntimeError):
@@ -85,16 +87,17 @@ class MetaAPI:
 
     def datos_ads(self, cliente: Cliente, p: Periodo) -> dict:
         c = cliente.ad_account_id
-        tot = self.insights(c, p.desde, p.hasta)
-        tot_prev = self.insights(c, p.prev_desde, p.prev_hasta)
+        cols_ad = ["ad_id", "ad_name", "adset_id", "adset_name", "campaign_id", "campaign_name"] + CAMPOS_VIDEO
+        cols_cj = ["adset_id", "adset_name", "campaign_id", "campaign_name"]
+        tot = self.insights(c, p.desde, p.hasta, extra=CAMPOS_VIDEO)
+        tot_prev = self.insights(c, p.prev_desde, p.prev_hasta, extra=CAMPOS_VIDEO)
         campanas = self.insights(c, p.desde, p.hasta, "campaign", ["campaign_id", "campaign_name", "objective"])
         campanas_prev = self.insights(c, p.prev_desde, p.prev_hasta, "campaign", ["campaign_id", "campaign_name"])
-        anuncios = self.insights(c, p.desde, p.hasta, "ad",
-                                 ["ad_id", "ad_name", "adset_id", "adset_name", "campaign_name"])
+        conjuntos = self.insights(c, p.desde, p.hasta, "adset", cols_cj)
+        conjuntos_prev = self.insights(c, p.prev_desde, p.prev_hasta, "adset", cols_cj)
+        anuncios = self.insights(c, p.desde, p.hasta, "ad", cols_ad)
+        anuncios_prev = self.insights(c, p.prev_desde, p.prev_hasta, "ad", cols_ad)
         diario = self.insights(c, p.desde, p.hasta, diario=True)
-        miniaturas = self._miniaturas([a["ad_id"] for a in anuncios if a.get("ad_id")][:60])
-        for a in anuncios:
-            a["miniatura"] = miniaturas.get(a.get("ad_id"))
         try:
             cuenta = self.get(c, {"fields": "name,currency,account_status"})
         except ErrorMeta as e:
@@ -102,22 +105,30 @@ class MetaAPI:
             cuenta = {}
         return {
             "cuenta": cuenta,
-            "actual": {"totales": tot[0] if tot else {}, "campanas": campanas,
+            "objetos": self._objetos(c),
+            "actual": {"totales": tot[0] if tot else {}, "campanas": campanas, "conjuntos": conjuntos,
                        "anuncios": anuncios, "diario": diario},
-            "anterior": {"totales": tot_prev[0] if tot_prev else {}, "campanas": campanas_prev},
+            "anterior": {"totales": tot_prev[0] if tot_prev else {}, "campanas": campanas_prev,
+                         "conjuntos": conjuntos_prev, "anuncios": anuncios_prev},
         }
 
-    def _miniaturas(self, ids: list[str]) -> dict:
+    def _objetos(self, cuenta: str) -> dict:
+        """Configuración actual de campañas, conjuntos y anuncios (presupuestos, estado, creativo)."""
+        pedidos = {
+            "campanas": ("campaigns", "id,name,effective_status,objective,daily_budget,lifetime_budget,bid_strategy"),
+            "conjuntos": ("adsets", "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,"
+                                    "optimization_goal,learning_stage_info"),
+            "anuncios": ("ads", "id,name,adset_id,campaign_id,effective_status,created_time,"
+                                "creative{object_type,thumbnail_url,image_url,video_id,title,body,call_to_action_type}"),
+        }
         res = {}
-        for i in range(0, len(ids), 40):
-            lote = ids[i:i + 40]
+        for clave, (edge, campos) in pedidos.items():
             try:
-                d = self.get("", {"ids": ",".join(lote), "fields": "creative{thumbnail_url,image_url}"})
-            except ErrorMeta:
-                continue
-            for ad_id, v in d.items():
-                cr = v.get("creative", {})
-                res[ad_id] = cr.get("thumbnail_url") or cr.get("image_url")
+                filas = self.paginar(f"{cuenta}/{edge}", {"fields": campos, "limit": 200}, maximo=1000)
+            except ErrorMeta as e:
+                self.avisos.append(f"No se pudo leer la configuración de {clave}: {e}")
+                filas = []
+            res[clave] = {f["id"]: f for f in filas}
         return res
 
     # ------------------------------------------------------------- FACEBOOK

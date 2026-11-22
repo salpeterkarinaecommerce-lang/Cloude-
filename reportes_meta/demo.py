@@ -73,38 +73,69 @@ def _ads(cliente: Cliente, p: Periodo, r: random.Random) -> dict:
     gasto_periodo = presupuesto / 30 * p.dias * r.uniform(0.85, 1.1)
     conv_base = {"ventas": 0.022, "leads": 0.09, "mensajes": 0.16, "trafico": 0, "reconocimiento": 0}[cliente.objetivo]
     cpm_base = r.uniform(2500, 5500) if cliente.moneda == "ARS" else r.uniform(4, 12)
+    div = 100  # presupuestos en centavos, como los devuelve Meta
+    textos = ["Nueva colección disponible. Conocé todos los modelos en nuestra web.",
+              "🔥 20% OFF solo por esta semana + envío gratis desde $60.000",
+              "Lo que dicen nuestras clientas ⭐⭐⭐⭐⭐", "Hasta 6 cuotas sin interés. Comprá online."]
+    n_camp = r.randint(3, 4)
+    estructura = []  # (camp_idx, nombre, [(cj_idx, nombre_cj, [ad_idx...])])
+    k = 0
+    for i in range(n_camp):
+        cjs = []
+        for j in range(r.choice([1, 1, 2, 3])):
+            ads_cj = list(range(k, k + r.randint(1, 4)))
+            k += len(ads_cj)
+            cjs.append((j, ["Conjunto A", "Conjunto B · Intereses", "Conjunto C · Lookalike"][j], ads_cj))
+        estructura.append((i, NOMBRES_CAMP[i], cjs))
+    calidad_ad = {a: r.uniform(0.2, 1.8) for a in range(k)}
+    calidad_camp = {i: r.uniform(0.5, 1.5) * (1.4 if "Remarketing" in NOMBRES_CAMP[i] else 1) for i in range(n_camp)}
+    pesos_camp = {i: r.uniform(0.5, 3) for i in range(n_camp)}
+    hook = {a: r.uniform(0.12, 0.42) for a in range(k)}
 
-    def generar_periodo(factor):
-        campanas, anuncios = [], []
-        n = r.randint(3, 4)
-        pesos = [r.uniform(0.5, 3) for _ in range(n)]
-        for i in range(n):
-            g = gasto_periodo * factor * pesos[i] / sum(pesos)
-            nombre = NOMBRES_CAMP[i]
-            calidad = r.uniform(0.45, 1.6) * (1.4 if "Remarketing" in nombre else 1)
-            ads_camp = []
-            n_ads = r.randint(2, 4)
-            pesos_ad = [r.uniform(0.3, 3) for _ in range(n_ads)]
-            for j in range(n_ads):
-                ga = g * pesos_ad[j] / sum(pesos_ad)
-                q = calidad * r.uniform(0.2, 1.7)
-                ad_name = NOMBRES_AD[(i * 3 + j) % len(NOMBRES_AD)]
-                ads_camp.append(_fila(r, ga, cpm_base * r.uniform(0.8, 1.4), 0.011 * q ** 0.5,
-                                      conv_base * q, accion, ticket, {
-                                          "ad_id": f"{i}{j}", "ad_name": ad_name,
-                                          "adset_id": f"{i}", "adset_name": f"{nombre} · Conjunto A",
-                                          "campaign_name": nombre, "miniatura": None}))
-                if r.random() < 0.15:  # anuncio con frecuencia alta
-                    ads_camp[-1]["frequency"] = f"{r.uniform(4, 6):.4f}"
-            anuncios.extend(ads_camp)
-            fila = _sumar(ads_camp)
+    def generar_periodo(factor, fatiga=0.0):
+        campanas, conjuntos, anuncios = [], [], []
+        for i, nombre, cjs in estructura:
+            g_camp = gasto_periodo * factor * pesos_camp[i] / sum(pesos_camp.values())
+            filas_camp = []
+            pesos_cj = [0.5 + (hash((i, j)) % 100) / 60 for j, _, _ in cjs]
+            for j, nombre_cj, ids in cjs:
+                g_cj = g_camp * pesos_cj[j] / sum(pesos_cj)
+                pesos_ad = {a: r.uniform(0.3, 3) for a in ids}
+                filas_cj = []
+                for a in ids:
+                    ga = g_cj * pesos_ad[a] / sum(pesos_ad.values())
+                    q = calidad_camp[i] * calidad_ad[a] * (1 - fatiga * r.random())
+                    ad_name = NOMBRES_AD[a % len(NOMBRES_AD)]
+                    formato = ("video" if any(x in ad_name.lower() for x in ("video", "reel", "story"))
+                               else "carrusel" if "carrusel" in ad_name.lower() else "imagen")
+                    fila = _fila(r, ga, cpm_base * r.uniform(0.8, 1.4), 0.011 * q ** 0.5, conv_base * q, accion, ticket, {
+                        "ad_id": str(a), "ad_name": ad_name, "adset_id": f"{i}-{j}",
+                        "adset_name": f"{nombre} · {nombre_cj}", "campaign_id": str(i), "campaign_name": nombre,
+                        "miniatura": None, "formato": formato})
+                    if formato == "video":
+                        v3 = int(float(fila["impressions"]) * hook[a])
+                        fila["actions"].append({"action_type": "video_view", "value": str(v3)})
+                        fila["video_thruplay_watched_actions"] = [{"action_type": "video_view",
+                                                                   "value": str(int(v3 * r.uniform(0.08, 0.35)))}]
+                    if r.random() < 0.18:
+                        fila["frequency"] = f"{r.uniform(4.2, 6):.4f}"
+                    filas_cj.append(fila)
+                anuncios.extend(filas_cj)
+                fcj = _sumar(filas_cj)
+                fcj.update({"adset_id": f"{i}-{j}", "adset_name": f"{nombre} · {nombre_cj}",
+                            "campaign_id": str(i), "campaign_name": nombre})
+                if any(float(x["frequency"]) > 4 for x in filas_cj):
+                    fcj["frequency"] = f"{r.uniform(3.6, 5):.4f}"
+                conjuntos.append(fcj)
+                filas_camp.extend(filas_cj)
+            fila = _sumar(filas_camp)
             fila.update({"campaign_id": str(i), "campaign_name": nombre,
                          "objective": "OUTCOME_SALES" if cliente.objetivo == "ventas" else "OUTCOME_LEADS"})
             campanas.append(fila)
-        return campanas, anuncios
+        return campanas, conjuntos, anuncios
 
-    camp, ads = generar_periodo(1.0)
-    camp_prev, _ = generar_periodo(r.uniform(0.8, 1.15))
+    camp_prev, cj_prev, ads_prev = generar_periodo(r.uniform(0.8, 1.15))
+    camp, cjs, ads = generar_periodo(1.0, fatiga=0.35)
     tot = _sumar(camp)
     diario = []
     for d in range(p.dias):
@@ -114,9 +145,26 @@ def _ads(cliente: Cliente, p: Periodo, r: random.Random) -> dict:
                   conv_base * r.uniform(0.6, 1.4), accion, ticket)
         f["date_start"] = f["date_stop"] = dia.isoformat()
         diario.append(f)
+
+    objetos = {"campanas": {}, "conjuntos": {}, "anuncios": {}}
+    for i, nombre, estructura_cj in estructura:
+        cbo = i == 2  # una campaña con presupuesto de campaña (Advantage+)
+        gasto_dia = sum(float(c["spend"]) for c in camp if c["campaign_id"] == str(i)) / p.dias
+        objetos["campanas"][str(i)] = {"id": str(i), "name": nombre, "effective_status": "ACTIVE",
+                                      **({"daily_budget": str(int(gasto_dia * 1.05 * div))} if cbo else {})}
+        for j, nombre_cj, ids in estructura_cj:
+            g = sum(float(c["spend"]) for c in cjs if c["adset_id"] == f"{i}-{j}") / p.dias
+            objetos["conjuntos"][f"{i}-{j}"] = {
+                "id": f"{i}-{j}", "name": nombre_cj, "effective_status": "ACTIVE",
+                **({} if cbo else {"daily_budget": str(int(round(g * 1.05 / 500) * 500 * div))}),
+                "learning_stage_info": {"status": r.choice(["SUCCESS", "SUCCESS", "LEARNING", "FAIL"])}}
+            for a in ids:
+                objetos["anuncios"][str(a)] = {"id": str(a), "effective_status": "ACTIVE", "creative": {
+                    "body": r.choice(textos), "call_to_action_type": r.choice(["SHOP_NOW", "LEARN_MORE"])}}
     return {"cuenta": {"name": f"{cliente.nombre} · Cuenta publicitaria", "currency": cliente.moneda},
-            "actual": {"totales": tot, "campanas": camp, "anuncios": ads, "diario": diario},
-            "anterior": {"totales": _sumar(camp_prev), "campanas": camp_prev}}
+            "objetos": objetos,
+            "actual": {"totales": tot, "campanas": camp, "conjuntos": cjs, "anuncios": ads, "diario": diario},
+            "anterior": {"totales": _sumar(camp_prev), "campanas": camp_prev, "conjuntos": cj_prev, "anuncios": ads_prev}}
 
 
 def _posts(p: Periodo, r: random.Random, red: str, seguidores: int) -> list[dict]:

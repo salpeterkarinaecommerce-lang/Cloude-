@@ -5,7 +5,7 @@ Genera automáticamente, para cada cliente:
 | Qué | Para quién | Contenido |
 |---|---|---|
 | **PDF del cliente** | Para reenviar al cliente | Resumen en lenguaje simple, KPIs con explicación, gráficos, mejores anuncios y publicaciones, próximos pasos y glosario. Con el color y el logo del cliente. |
-| **PDF INTERNO** | Para vos | Semáforo, lista priorizada de qué hacer (crítico / alerta / oportunidad), tabla completa de métricas con variaciones, campañas, anuncios marcados para pausar, escalar o con fatiga, y detalle del orgánico. |
+| **PDF INTERNO** | Para vos | **Plan de acción**: qué cambiar en cada campaña, conjunto y anuncio, cómo y por qué. Además, el diagnóstico general, las métricas completas con variaciones, las tablas de campañas, conjuntos y anuncios, y el detalle del orgánico. |
 | **Panel web** | Para vos | Todas las cuentas en una sola pantalla, protegido con contraseña, con historial. |
 
 - **Cuándo:** el semanal sale todos los lunes (semana anterior, de lunes a domingo) y el mensual el día 1 (mes anterior). En los dos casos se compara contra el período anterior.
@@ -96,29 +96,52 @@ Solo funciona si el issue lo abrís vos, la dueña del repo. Si lo abre otra per
 
 ---
 
-## Qué analiza el motor de recomendaciones
+## Plan de acción para Meta Ads (en el PDF interno y en el panel)
 
-**Meta Ads:**
-- CPA contra el objetivo y contra el período anterior, con la causa probable: subió el CPM, cayó el CTR o cayó la conversión de la landing.
-- ROAS contra el objetivo.
-- Frecuencia alta (saturación) y creatividades con fatiga.
-- CTR de enlace bajo (< 0,8 %) o bueno (> 1,5 %).
-- Suba fuerte del CPM.
+Cada cambio recomendado viene en una ficha con:
+
+| | |
+|---|---|
+| **Dónde** | Campaña › Conjunto › Anuncio, con la miniatura y el formato del creativo (video, imagen o carrusel) |
+| **Qué hacer** | El cambio exacto: "Apagar este anuncio", "Subir el presupuesto del conjunto de $ 9.500 a $ 11.400 diarios", "Reemplazar los primeros 3 segundos del video"… |
+| **Por qué** | Los números que lo justifican, comparados con tu CPA objetivo, con el promedio de la cuenta y con el mejor anuncio del mismo conjunto |
+| **Cómo hacerlo** | Los pasos dentro del Administrador de anuncios |
+| **Impacto esperado** | Cuánta plata libera o cuántos resultados más se esperan |
+
+Arriba de todo hay una tabla resumen ordenada por prioridad (alta, media, baja).
+
+### Qué cambios detecta
+
+| Nivel | Cambio | Cuándo lo sugiere |
+|---|---|---|
+| Anuncio | **Pausar anuncio** / **Reemplazar anuncio** | Gastó más de 2 veces el CPA objetivo sin resultados, o su CPA es más de 2 veces el objetivo. Si es el único anuncio del conjunto, primero pide subir el reemplazo. |
+| Anuncio | **Cambiar el gancho del video** | Menos del 25 % de las impresiones pasa los 3 primeros segundos. |
+| Anuncio | **Acortar / dar ritmo al video** | El gancho funciona, pero menos del 20 % sigue mirando hasta el final (ThruPlay). |
+| Anuncio | **Cambiar texto / imagen** | CTR bajo: menos de 0,8 % o 30 % por debajo de la cuenta. Muestra el texto actual y sugiere un CTA mejor. |
+| Anuncio | **Revisar la página de destino** | El CTR es bueno pero los clics no convierten. Los pasos se adaptan a ventas, leads o mensajes. |
+| Anuncio | **Refrescar creativo (fatiga)** | Frecuencia mayor a 4 y CTR en caída contra el período anterior. |
+| Anuncio | **Duplicar ganador** | CPA 25 % por debajo del objetivo con volumen. Sugiere usar la publicación existente y crear variaciones en otros formatos. |
+| Conjunto o campaña | **Subir presupuesto (de $X a $Y)** | CPA 20 % por debajo del objetivo, con volumen y frecuencia sana. Siempre sube +20 % para no reiniciar el aprendizaje. Si la campaña tiene presupuesto de campaña (Advantage+), lo indica ahí. |
+| Conjunto | **Bajar presupuesto** / **Pausar conjunto** | CPA entre 1,3 y 2,5 veces el objetivo, o sin resultados. |
+| Conjunto | **Ampliar audiencia** | Frecuencia alta junto con suba del CPM o del CPA. Las instrucciones cambian según sea prospección o remarketing. |
+| Conjunto | **Agregar creativos** | Menos de 3 anuncios activos. |
+| Conjunto | **Salir de aprendizaje limitado** | Meta lo marca como "Aprendizaje limitado". |
+| Campaña | **Mover presupuesto entre campañas** | Una campaña consigue resultados 40 % más baratos que otra. Indica cuánto mover por día. |
+| Campaña | **Pausar campaña** | Ninguno de sus conjuntos llega a un costo aceptable. |
+| Campaña | **Unificar conjuntos** | Hay 3 o más conjuntos con pocas conversiones. |
+| Campaña | **Corregir suba de CPA** | Explica la causa: CPM, CTR o conversión de la web. |
+
+El sistema también evita contradicciones: si un conjunto se va a pausar, no sugiere cambios en sus anuncios, y si se pausarían todos los conjuntos de una campaña, recomienda pausar la campaña entera.
+Las referencias (25 % de gancho, 0,8 % de CTR, etc.) se ajustan al principio de `reportes_meta/acciones.py`.
+
+### Diagnóstico general de la cuenta
+
+Además del plan, el reporte interno resume la salud general de la cuenta:
+- CPA y ROAS contra el objetivo.
+- Frecuencia, CTR y CPM.
 - Carritos que no terminan en compra.
-- Anuncios para **pausar**, anuncios **ganadores** para escalar y cuánto subir el presupuesto sin reiniciar el aprendizaje.
-- Presupuesto concentrado en una sola campaña.
-- Conjuntos que no salen de la fase de aprendizaje, y pocas creatividades activas.
 - Ritmo de gasto contra el presupuesto mensual.
-
-**Orgánico (Instagram y Facebook):**
-- Frecuencia de publicación, caídas de alcance y engagement bajo.
-- Qué formato rinde más (reels, carruseles, fotos).
-- Mejor día y horario para publicar.
-- Qué publicación conviene pasar a anuncio.
-
-Los umbrales se ajustan al principio de `reportes_meta/analisis.py`.
-
----
+- En el orgánico: frecuencia de publicación, alcance, engagement, mejor formato, mejor horario y qué publicación conviene pasar a anuncio.
 
 ## Uso local (opcional)
 
@@ -144,7 +167,8 @@ clientes/               ← un .yaml por cliente (ejemplos/ solo se usa en modo 
 reportes_meta/
   meta_api.py           ← descarga de Meta (Ads, Facebook, Instagram)
   metricas.py           ← cálculo de KPIs y variaciones
-  analisis.py           ← motor de interpretación y recomendaciones
+  acciones.py           ← plan de acción por campaña / conjunto / anuncio
+  analisis.py           ← diagnóstico general y resumen para el cliente
   ia.py                 ← redacción opcional con Gemini (gratis)
   plantillas/           ← diseño de los PDF y del panel
   panel.py              ← panel cifrado para GitHub Pages

@@ -13,6 +13,7 @@ import traceback
 from datetime import date
 from pathlib import Path
 
+from . import acciones as acciones_mod
 from . import analisis as analisis_mod
 from . import config, correo, ia, metricas, panel, periodos, render
 from . import formato as fmt
@@ -29,10 +30,11 @@ def generar_cliente(c: Cliente, p: periodos.Periodo, demo: bool) -> dict:
         from . import meta_api
         datos = meta_api.descargar(c, p)
     m = metricas.calcular(c, datos)
-    a = analisis_mod.analizar(c, p, m)
-    textos_ia = ia.redactar(c, p, m, a)
+    plan = acciones_mod.generar(c, p, m["ads"])
+    a = analisis_mod.analizar(c, p, m, plan)
+    textos_ia = ia.redactar(c, p, m, a, plan)
     g = render.preparar_graficos(c, m)
-    ctx = dict(cliente=c, periodo=p, m=m, analisis=a, ia=textos_ia, graficos=g)
+    ctx = dict(cliente=c, periodo=p, m=m, analisis=a, plan=plan, ia=textos_ia, graficos=g)
     carpeta = SALIDA / p.clave
     pdf_cliente = render.a_pdf(render.html("cliente.html.j2", **ctx), carpeta / f"{c.slug}-cliente-{p.clave}.pdf")
     pdf_interno = render.a_pdf(render.html("interno.html.j2", **ctx), carpeta / f"{c.slug}-INTERNO-{p.clave}.pdf")
@@ -45,14 +47,15 @@ def cuerpo_mail(p, reportes, errores, url_panel) -> str:
     for r in reportes:
         a, c = r["analisis"], r["cliente"]
         ads = r["m"]["ads"]
-        prioridades = [h for h in a.hallazgos if h.nivel in ("critico", "alerta")][:3]
+        prioridades = [f"{x.tipo}: {x.anuncio or x.conjunto or x.campana}" for x in r["plan"].acciones[:3]] or \
+                      [h.titulo for h in a.hallazgos if h.nivel in ("critico", "alerta")][:3]
         filas += (f'<tr><td style="padding:8px;border-bottom:1px solid #eee"><b>{c.nombre}</b><br>'
                   f'<span style="color:{colores[a.estado]}">● {a.estado_texto}</span></td>'
                   f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:right">'
                   f'{fmt.moneda(ads["actual"]["gasto"], c.moneda) if ads else "—"}<br>'
                   f'<small>CPA {fmt.moneda(ads["actual"]["cpa"], c.moneda) if ads else "—"}</small></td>'
                   f'<td style="padding:8px;border-bottom:1px solid #eee;font-size:13px">'
-                  + "<br>".join(f"• {h.titulo}" for h in prioridades) + "</td></tr>")
+                  + "<br>".join(f"• {t}" for t in prioridades) + "</td></tr>")
     err = "".join(f"<li>{e}</li>" for e in errores)
     enlace = f'<p><a href="{url_panel}">Abrir el panel online</a> (pide tu contraseña).</p>' if url_panel else ""
     return f"""<div style="font-family:Segoe UI,Arial,sans-serif;max-width:720px">

@@ -33,7 +33,7 @@ def _llamar(prompt: str) -> str | None:
         return None
 
 
-def redactar(cliente, periodo, metricas: dict, analisis) -> dict:
+def redactar(cliente, periodo, metricas: dict, analisis, plan=None) -> dict:
     """Devuelve {'cliente': texto, 'interno': texto} o {} si la IA no está configurada."""
     if not os.environ.get("GEMINI_API_KEY"):
         return {}
@@ -48,6 +48,7 @@ def redactar(cliente, periodo, metricas: dict, analisis) -> dict:
         "facebook": {k: v for k, v in (metricas.get("facebook") or {}).items() if k in
                      ("alcance", "interacciones", "nuevos_seguidores", "engagement", "var")},
         "hallazgos": [h.__dict__ for h in analisis.hallazgos],
+        "plan_de_accion": [{"donde": x.donde, "que": x.que, "porque": x.porque} for x in (plan.acciones if plan else [])[:10]],
         "notas_agencia": cliente.notas,
     }
     datos = json.dumps(contexto, ensure_ascii=False, default=str)
@@ -59,6 +60,6 @@ def redactar(cliente, periodo, metricas: dict, analisis) -> dict:
     texto_interno = _llamar(
         "Sos un media buyer senior de Meta Ads. Con estos datos y hallazgos, escribí para la AGENCIA un "
         "diagnóstico breve (máx. 120 palabras) en español rioplatense: la causa raíz más probable del "
-        "rendimiento y las 3 acciones prioritarias en orden, concretas (qué tocar, cuánto). No inventes "
-        "números.\n\n" + datos)
+        "rendimiento y cuáles 3 acciones del plan_de_accion harías primero y por qué (nombrando campaña/anuncio). "
+        "No inventes números ni acciones nuevas.\n\n" + datos)
     return {k: v for k, v in (("cliente", texto_cliente), ("interno", texto_interno)) if v}

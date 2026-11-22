@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import kpi, grafico %}
+{% from "_macros.html.j2" import kpi, grafico, plan_resumen, accion_ficha %}
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>INTERNO · {{ cliente.nombre }} · {{ periodo.titulo }}</title>
 <style>{% include "base.css" %} :root { --marca: #111827; }</style></head>
@@ -17,7 +17,18 @@
 
 {% if ia.interno %}<div class="caja"><b>Lectura rápida (IA):</b> {{ ia.interno }}</div>{% endif %}
 
-<h2>Qué hacer esta {{ "semana" if periodo.tipo == "semanal" else "vez" }}</h2>
+{% if plan and plan.acciones %}
+<h2>Plan de acción en Meta Ads · {{ plan.acciones|length }} cambio(s)</h2>
+<p class="nota">Ordenado por prioridad. Cada cambio indica dónde hacerlo (campaña › conjunto › anuncio), qué hacer, por qué y cómo.
+Referencia de CPA: {{ plan.referencias.ref_txt }}{% if plan.referencias.mejor_formato %} · formato que mejor convierte: {{ plan.referencias.mejor_formato }}{% endif %}.</p>
+{{ plan_resumen(plan) }}
+{% for x in plan.acciones %}{{ accion_ficha(x, loop.index) }}{% endfor %}
+{% elif m.ads %}
+<h2>Plan de acción en Meta Ads</h2>
+<p>No hay cambios urgentes por anuncio, conjunto o campaña: la cuenta está dentro de los objetivos.</p>
+{% endif %}
+
+<h2 {% if plan and plan.acciones %}class="salto"{% endif %}>Diagnóstico general de la cuenta</h2>
 {% for h in analisis.hallazgos if h.nivel != "ok" %}
 <div class="hallazgo {{ h.nivel }}">
   <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
@@ -71,19 +82,30 @@
   {% endfor %}
 </table>
 
-<h3>Anuncios (por inversión)</h3>
+<h3>Conjuntos de anuncios</h3>
 <table>
-  <tr><th>Anuncio</th><th>Conjunto</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CTR</th><th class="n">Frec.</th><th>Señal</th></tr>
-  {% set ref = cliente.cpa_objetivo or a.cpa %}
-  {% for x in m.ads.anuncios[:25] %}
-  {% set senal = "" %}
-  {% if ref and x.gasto > 2 * ref and (x.resultados == 0 or (x.cpa or 0) > 2 * ref) %}{% set senal = "pausar" %}
-  {% elif ref and x.resultados >= 3 and x.cpa and x.cpa < 0.75 * ref %}{% set senal = "escalar" %}
-  {% elif (x.frecuencia or 0) > 4 %}{% set senal = "fatiga" %}{% endif %}
-  <tr><td>{{ x.nombre }}</td><td class="nota">{{ x.conjunto }}</td><td class="n">{{ x.gasto|moneda(mon) }}</td>
-      <td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td><td class="n">{{ x.ctr|pct(2) }}</td>
+  <tr><th>Conjunto</th><th class="n">Presupuesto</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">CTR</th><th class="n">Frec.</th><th class="n">Anuncios</th><th>Aprendizaje</th></tr>
+  {% for x in m.ads.conjuntos %}
+  <tr><td>{{ x.nombre }}<div class="nota">{{ x.campana }}</div></td>
+      <td class="n">{% if x.presupuesto %}{{ x.presupuesto|moneda(mon) }}{{ "/día" if x.tipo_presupuesto == "diario" else " total" }}{% elif x.presupuesto_en_campana %}<span class="nota">de campaña</span>{% else %}—{% endif %}</td>
+      <td class="n">{{ x.gasto|moneda(mon) }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td>
+      <td class="n"><span class="var {{ clase_var(x.var_cpa, False) }}">{{ x.var_cpa|var }}</span></td>
+      <td class="n">{{ x.ctr|pct(2) }}</td><td class="n">{{ x.frecuencia|num(1) }}</td><td class="n">{{ x.anuncios_activos }}</td>
+      <td class="nota">{{ {"SUCCESS": "Completo", "LEARNING": "En aprendizaje", "FAIL": "Limitado"}.get(x.aprendizaje, "—") }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Anuncios (por inversión)</h3>
+{% set senales = {} %}
+{% if plan %}{% for x in plan.acciones if x.anuncio %}{% if (x.conjunto ~ x.anuncio) not in senales %}{% set _ = senales.update({x.conjunto ~ x.anuncio: x}) %}{% endif %}{% endfor %}{% endif %}
+<table>
+  <tr><th>Anuncio</th><th>Formato</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CTR</th><th class="n">Gancho 3 s</th><th class="n">Frec.</th><th>Cambio sugerido</th></tr>
+  {% for x in m.ads.anuncios[:30] %}{% set acc = senales.get(x.conjunto ~ x.nombre) %}
+  <tr><td>{{ x.nombre }}<div class="nota">{{ x.conjunto }}</div></td><td class="nota">{{ x.formato }}</td>
+      <td class="n">{{ x.gasto|moneda(mon) }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td>
+      <td class="n">{{ x.ctr|pct(2) }}</td><td class="n">{{ x.hook_rate|pct(0) if x.hook_rate else "—" }}</td>
       <td class="n">{{ x.frecuencia|num(1) }}</td>
-      <td>{% if senal %}<span class="chip {{ {'pausar':'critico','escalar':'oportunidad','fatiga':'alerta'}[senal] }}">{{ senal }}</span>{% endif %}</td></tr>
+      <td>{% if acc %}<span class="chip p-{{ acc.prioridad }}">{{ acc.tipo }}</span>{% endif %}</td></tr>
   {% endfor %}
 </table>
 {% endif %}

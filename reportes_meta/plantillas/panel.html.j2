@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import grafico %}
+{% from "_macros.html.j2" import grafico, accion_ficha %}
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panel · {{ periodo.titulo }}</title>
@@ -29,7 +29,7 @@
 <div class="tarjeta">
   <h2 style="margin-top:0">Resumen de todas las cuentas</h2>
   <div class="tabla-scroll"><table>
-    <tr><th>Cliente</th><th>Estado</th><th class="n">Inversión</th><th class="n">Var.</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CPA obj.</th><th class="n">ROAS</th><th class="n">Alcance org.</th><th class="n">Alertas</th></tr>
+    <tr><th>Cliente</th><th>Estado</th><th class="n">Inversión</th><th class="n">Var.</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CPA obj.</th><th class="n">ROAS</th><th class="n">Alcance org.</th><th class="n">Cambios</th></tr>
     {% for r in reportes %}{% set a = r.m.ads.actual if r.m.ads else None %}
     <tr>
       <td><a href="#{{ r.cliente.slug }}">{{ r.cliente.nombre }}</a></td>
@@ -41,7 +41,7 @@
       <td class="n">{{ r.cliente.cpa_objetivo|moneda(r.cliente.moneda) if r.cliente.cpa_objetivo else "—" }}</td>
       <td class="n">{{ a.roas|num(2) if a and a.roas else "—" }}</td>
       <td class="n">{{ ((r.m.instagram.alcance or 0) + (r.m.facebook.alcance or 0) if (r.m.instagram or r.m.facebook) else None)|compacto }}</td>
-      <td class="n">{{ r.analisis.hallazgos|selectattr("nivel", "in", ["critico", "alerta"])|list|length }}</td>
+      <td class="n">{% set alta = r.plan.acciones|selectattr("prioridad", "equalto", "alta")|list|length %}{{ r.plan.acciones|length }}{% if alta %} <span class="chip p-alta">{{ alta }} alta</span>{% endif %}</td>
     </tr>{% endfor %}
   </table></div>
 </div>
@@ -67,8 +67,12 @@
     {{ grafico(r.graficos.cpa_diario, "CPA diario") }}
   </div>
   {% endif %}
-  <h3>Diagnóstico y acciones</h3>
-  {% for h in r.analisis.hallazgos %}
+  {% if r.plan.acciones %}
+  <h3>Plan de acción · {{ r.plan.acciones|length }} cambio(s)</h3>
+  {% for x in r.plan.acciones %}{{ accion_ficha(x, loop.index, False) }}{% endfor %}
+  {% endif %}
+  <h3>Diagnóstico general</h3>
+  {% for h in r.analisis.hallazgos if h.nivel != "ok" %}
   <div class="hallazgo {{ h.nivel }}">
     <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
     <div class="d">{{ h.detalle }}</div>

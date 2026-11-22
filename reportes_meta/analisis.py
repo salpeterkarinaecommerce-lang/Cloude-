@@ -173,46 +173,11 @@ def _analizar_ads(c: Cliente, p: Periodo, m: dict, a: Analisis):
                       f"{fmt.numero(act['carritos'])} agregados al carrito → {fmt.numero(act['resultados'])} compras.",
                       "Revisar costos de envío, medios de pago y checkout; activar remarketing de carrito abandonado.")
 
-    # Anuncios para pausar / escalar
-    if c.objetivo != "reconocimiento":
-        ref = cpa_obj or cpa
-        if ref:
-            pausar = [x for x in m["anuncios"] if x["gasto"] > 2 * ref and (x["resultados"] == 0 or (x["cpa"] or 0) > 2 * ref)]
-            escalar = [x for x in m["anuncios"] if x["resultados"] >= 3 and x["cpa"] and x["cpa"] < 0.75 * ref]
-            if pausar:
-                a.agregar("critico" if len(pausar) > 2 else "alerta", "Ads", f"{len(pausar)} anuncio(s) para pausar",
-                          "; ".join(f"«{x['nombre']}» ({x['campana']}): gastó {fmt.moneda(x['gasto'], mon)}, "
-                                    f"{fmt.numero(x['resultados'])} {plur}" for x in pausar[:5]),
-                          "Pausarlos y redistribuir ese presupuesto hacia los ganadores.")
-            if escalar:
-                a.agregar("oportunidad", "Ads", f"{len(escalar)} anuncio(s) ganadores",
-                          "; ".join(f"«{x['nombre']}»: CPA {fmt.moneda(x['cpa'], mon)}" for x in escalar[:5]),
-                          "Duplicarlos en un conjunto nuevo o darles más presupuesto; crear variaciones del mismo concepto.")
-
-    fatigados = [x for x in m["anuncios"] if (x["frecuencia"] or 0) > FREC_AD_FATIGA and x["gasto"] > act["gasto"] * 0.05]
-    if fatigados:
-        a.agregar("alerta", "Ads", "Creatividades con fatiga",
-                  ", ".join(f"«{x['nombre']}» (frec. {fmt.numero(x['frecuencia'], 1)})" for x in fatigados[:5]),
-                  "Reemplazar o refrescar (nuevo gancho, nuevo formato) en los próximos días.")
-
+    # Los cambios por anuncio / conjunto / campaña van en el plan de acción (acciones.py)
     if m["campanas"] and m["campanas"][0]["participacion"] and m["campanas"][0]["participacion"] > 0.75 and len(m["campanas"]) > 1:
         a.agregar("oportunidad", "Ads", "Presupuesto muy concentrado en una campaña",
                   f"«{m['campanas'][0]['nombre']}» se lleva {fmt.porcentaje(m['campanas'][0]['participacion'], 0)} de la inversión.",
                   "Está bien si es la ganadora, pero conviene reservar 10-20 % para testeo.")
-
-    if c.objetivo in ("ventas", "leads", "mensajes"):
-        limite_aprendizaje = 50 * p.dias / 7
-        en_aprendizaje = [n for n, cj in m["conjuntos"].items() if cj["resultados"] < limite_aprendizaje * 0.3 and cj["gasto"] > 0]
-        if len(en_aprendizaje) >= 3:
-            a.agregar("oportunidad", "Ads", f"{len(en_aprendizaje)} conjuntos con pocas conversiones",
-                      "Con menos de ~50 conversiones por semana por conjunto, Meta no sale de la fase de aprendizaje.",
-                      "Consolidar conjuntos (menos conjuntos con más presupuesto cada uno) o usar Advantage+.")
-
-    activos = [x for x in m["anuncios"] if x["gasto"] > 0]
-    if len(activos) < 3:
-        a.agregar("oportunidad", "Ads", "Pocas creatividades activas",
-                  f"Solo {len(activos)} anuncio(s) con inversión.",
-                  "Tener al menos 3-5 creatividades por conjunto para que el algoritmo optimice.")
 
     # Presupuesto
     if c.presupuesto_mensual:
@@ -291,7 +256,7 @@ def _analizar_organico(o: dict, p: Periodo, a: Analisis):
                   "Probarla como anuncio (publicación existente) para aprovechar la prueba social.")
 
 
-def analizar(c: Cliente, p: Periodo, m: dict) -> Analisis:
+def analizar(c: Cliente, p: Periodo, m: dict, plan=None) -> Analisis:
     a = Analisis()
     if m["ads"]:
         _analizar_ads(c, p, m["ads"], a)
@@ -300,7 +265,8 @@ def analizar(c: Cliente, p: Periodo, m: dict) -> Analisis:
             _analizar_organico(m[red], p, a)
     a.hallazgos.sort(key=lambda h: (h.orden, h.area))
 
-    criticos = sum(h.nivel == "critico" for h in a.hallazgos)
+    acciones = plan.acciones if plan else []
+    criticos = sum(h.nivel == "critico" for h in a.hallazgos) + sum(x.prioridad == "alta" and x.categoria == "pausar" for x in acciones)
     alertas = sum(h.nivel == "alerta" for h in a.hallazgos)
     if not (m["ads"] or m["facebook"] or m["instagram"]):
         a.estado, a.estado_texto = "gris", "Sin datos"
@@ -315,6 +281,17 @@ def analizar(c: Cliente, p: Periodo, m: dict) -> Analisis:
     pasos = []
     areas = {h.titulo for h in a.hallazgos if h.nivel in ("critico", "alerta", "oportunidad")}
     texto = " ".join(areas).lower()
+    cats = {x.categoria for x in acciones}
+    if "pausar" in cats or "presupuesto" in cats:
+        texto += " pausar"
+    if "escalar" in cats:
+        texto += " ganadores"
+    if "creativo" in cats:
+        texto += " fatiga"
+    if "landing" in cats:
+        pasos.append("Vamos a revisar juntos la página o el canal donde llegan las personas después del clic, para que más consultas se conviertan.")
+    if "audiencia" in cats:
+        pasos.append("Vamos a ampliar el público para llegar a más personas nuevas.")
     if "pausar" in texto or "cpa" in texto:
         pasos.append("Vamos a concentrar la inversión en los anuncios que mejores resultados están dando.")
     if "ganadores" in texto or "escalar" in texto or "roas por encima" in texto:
@@ -327,9 +304,9 @@ def analizar(c: Cliente, p: Periodo, m: dict) -> Analisis:
         pasos.append("Te vamos a compartir sugerencias para que más personas terminen su compra en la web.")
     if not pasos:
         pasos.append("Seguimos con la estrategia actual y testeando nuevas ideas para seguir mejorando.")
-    a.proximos_pasos_cliente = pasos[:4]
+    a.proximos_pasos_cliente = list(dict.fromkeys(pasos))[:4]
 
-    a.resumen_interno = (f"{c.nombre}: {a.estado_texto}. "
+    a.resumen_interno = (f"{c.nombre}: {a.estado_texto}. {len(acciones)} cambio(s) en el plan de acción, "
                          f"{criticos} crítico(s), {alertas} alerta(s), "
                          f"{sum(h.nivel == 'oportunidad' for h in a.hallazgos)} oportunidad(es).")
     return a
