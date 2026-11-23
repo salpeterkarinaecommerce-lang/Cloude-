@@ -34,6 +34,22 @@ class ErrorMeta(RuntimeError):
     pass
 
 
+def _explicar(err: dict) -> str:
+    """Traduce los errores de permisos más comunes a una explicación accionable."""
+    msg, cod = err.get("message", "Error desconocido"), err.get("code")
+    base = f"{msg} (código {cod})"
+    if cod == 190:
+        return base + " → El token venció o fue revocado: generá uno nuevo y actualizá META_ACCESS_TOKEN."
+    if cod in (10, 200) or (isinstance(cod, int) and 200 <= cod < 300) or "permission" in msg.lower():
+        return (base + " → Falta permiso sobre este activo. En la página, tu negocio o usuario del sistema necesita "
+                "la tarea «Estadísticas» (ver métricas); en la cuenta publicitaria, «Ver rendimiento». "
+                "Pedíselo al dueño de la página o de la cuenta.")
+    if cod == 100 and ("does not exist" in msg or "missing permissions" in msg):
+        return (base + " → El ID no existe o no tenés acceso a ese activo. Revisá el ID en el archivo del cliente "
+                "y que el activo esté asignado al usuario del sistema.")
+    return base
+
+
 class MetaAPI:
     def __init__(self, token: str | None = None):
         self.token = token or os.environ.get("META_ACCESS_TOKEN")
@@ -60,7 +76,7 @@ class MetaAPI:
             if err.get("code") in (4, 17, 32, 613) or r.status_code >= 500:
                 time.sleep(15 * (intento + 1))
                 continue
-            raise ErrorMeta(f"{err.get('message', 'Error desconocido')} (código {err.get('code')})")
+            raise ErrorMeta(_explicar(err))
         raise ErrorMeta("Meta no respondió después de varios intentos (límite de uso).")
 
     def paginar(self, ruta: str, params: dict | None = None, token: str | None = None,
