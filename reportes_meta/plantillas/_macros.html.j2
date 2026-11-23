@@ -38,13 +38,14 @@
 </table>
 {%- endmacro %}
 
-{% macro accion_ficha(a, n, abrir_como=True) -%}
-<div class="accion p-{{ a.prioridad }}">
+{% macro accion_ficha(a, n, abrir_como=True, clave=None) -%}
+<div class="accion p-{{ a.prioridad }}" data-prioridad="{{ a.prioridad }}"{% if clave %} data-clave="{{ clave }}"{% endif %}>
   <div class="enc">
     <span class="num">{{ n }}</span>
     <span class="chip p-{{ a.prioridad }}">{{ a.prioridad|upper }}</span>
     <span class="tipo">{{ a.tipo }}</span>
     {% if a.formato %}<span class="chip">{{ a.formato }}</span>{% endif %}
+    {% if clave %}<label class="hecho"><input type="checkbox" data-clave="{{ clave }}"> Hecho</label>{% endif %}
   </div>
   <div class="cuerpo-accion">
     {% if a.miniatura %}<img class="mini" src="{{ a.miniatura }}" alt="">{% endif %}

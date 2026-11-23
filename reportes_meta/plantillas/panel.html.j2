@@ -1,57 +1,127 @@
 {% from "_macros.html.j2" import grafico, accion_ficha %}
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel · {{ periodo.titulo }}</title>
+<title>Reportes Meta · {{ periodo.titulo }}</title>
 <style>{% include "base.css" %}
-  body { background: #f3f4f6; font-size: 13px; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
-  .portada { background: #111827; }
+  :root { --lateral: #111827; --lateral-2: #1f2937; --fondo-app: #f3f4f6; }
+  html, body { background: var(--fondo-app); }
+  body { font-size: 13px; }
+  .app { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+  /* ---------- menú lateral */
+  .lateral { background: var(--lateral); color: #e5e7eb; padding: 18px 12px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .marca-app { font-weight: 800; font-size: 15px; color: #fff; padding: 0 8px; }
+  .periodo-app { font-size: 11px; color: #9ca3af; padding: 2px 8px 14px; }
+  .periodos { display: flex; gap: 4px; padding: 0 8px 14px; }
+  .periodos a { flex: 1; text-align: center; font-size: 11px; padding: 5px 0; border-radius: 6px; background: var(--lateral-2); color: #d1d5db; text-decoration: none; }
+  .periodos a.activo { background: #4f46e5; color: #fff; }
+  .seccion-lat { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; padding: 10px 8px 6px; }
+  .lateral nav a { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; color: #e5e7eb; text-decoration: none; font-size: 13px; }
+  .lateral nav a:hover { background: var(--lateral-2); }
+  .lateral nav a.activo { background: #374151; color: #fff; font-weight: 600; }
+  .punto { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #6b7280; }
+  .punto.verde { background: #22c55e; } .punto.amarillo { background: #f59e0b; } .punto.rojo { background: #ef4444; }
+  .lateral nav .cnt { margin-left: auto; font-size: 10px; background: #7f1d1d; color: #fecaca; border-radius: 999px; padding: 1px 7px; }
+  /* ---------- contenido */
+  main { padding: 22px 26px 60px; min-width: 0; }
+  .vista { display: none; max-width: 1100px; }
+  .vista.activa { display: block; }
+  .cabecera { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .cabecera h1 { font-size: 22px; }
+  .sub-cab { color: var(--texto-3); margin-bottom: 14px; }
   .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .tarjeta h2 { margin-top: 0; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--borde); margin: 16px 0 4px; overflow-x: auto; }
+  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px 14px; font: inherit; font-weight: 600; color: var(--texto-3); cursor: pointer; white-space: nowrap; }
+  .tabs button.activo { color: var(--texto); border-bottom-color: #4f46e5; }
+  .tabs .badge { font-size: 10px; background: #eef2ff; color: #4338ca; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+  .tab { display: none; } .tab.activa { display: block; }
   .tabla-scroll { overflow-x: auto; }
-  details > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  details > summary::-webkit-details-marker { display: none; }
-  details > summary h2 { border: 0; margin: 0; padding: 0; font-size: 16px; }
-  details[open] > summary { margin-bottom: 10px; }
-  .meta { color: var(--texto-3); font-size: 12px; }
-  .nav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .nav a { color: #fff; opacity: .85; font-size: 12px; }
-  @media (max-width: 640px) { .dos-col { grid-template-columns: 1fr; } .kpi .val { font-size: 16px; } }
+  .filtros { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+  .filtros button { border: 1px solid var(--borde); background: #fff; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+  .filtros button.activo { background: var(--texto); color: #fff; border-color: var(--texto); }
+  .progreso { margin-left: auto; font-size: 12px; color: var(--texto-3); display: flex; align-items: center; gap: 8px; }
+  .barra { width: 120px; height: 6px; background: var(--borde); border-radius: 999px; overflow: hidden; }
+  .barra i { display: block; height: 100%; background: var(--bueno); width: 0; transition: width .2s; }
+  .accion .hecho { margin-left: auto; font-size: 12px; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; color: var(--texto-2); }
+  .accion.completa { opacity: .5; } .accion.completa .tipo { text-decoration: line-through; }
+  .accion.oculta { display: none; }
+  .top-acc { display: grid; gap: 8px; }
+  .top-acc a { display: flex; gap: 10px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--borde); border-radius: 8px; text-decoration: none; color: inherit; background: #fff; }
+  .top-acc a:hover { border-color: #4f46e5; }
+  .vacio { color: var(--texto-3); padding: 20px 0; }
+  .menu-movil { display: none; }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .lateral { position: fixed; inset: 0 30% 0 0; z-index: 20; transform: translateX(-105%); transition: transform .2s; height: 100%; }
+    .lateral.abierto { transform: none; box-shadow: 0 0 0 100vmax rgba(0,0,0,.4); }
+    .menu-movil { display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--lateral); color: #fff; padding: 10px 16px; }
+    .menu-movil button { background: none; border: 1px solid #4b5563; color: #fff; border-radius: 6px; padding: 4px 10px; font: inherit; }
+    main { padding: 16px 16px 60px; }
+    .dos-col { grid-template-columns: 1fr; }
+    .progreso { margin-left: 0; width: 100%; }
+    .accion .cuerpo-accion { flex-direction: column; }
+  }
 </style></head>
-<body><div class="wrap">
-<div class="portada">
-  <div>
-    <h1>Panel de clientes</h1>
-    <div class="sub">{{ periodo.titulo }} · generado el {{ generado }}</div>
-    <div class="nav"><a href="semanal.html">Último semanal</a><a href="mensual.html">Último mensual</a><a href="historial.html">Historial</a></div>
+<body>
+<div class="menu-movil"><button id="abrir-menu" aria-label="Abrir menú">☰ Clientes</button><span id="titulo-movil">Todas las cuentas</span></div>
+<div class="app">
+<aside class="lateral" id="lateral">
+  <div class="marca-app">Reportes Meta</div>
+  <div class="periodo-app">{{ periodo.titulo }}<br>Actualizado: {{ generado }}</div>
+  <div class="periodos">
+    <a href="semanal.html" class="{{ 'activo' if periodo.tipo == 'semanal' }}">Semanal</a>
+    <a href="mensual.html" class="{{ 'activo' if periodo.tipo == 'mensual' }}">Mensual</a>
+    <a href="historial.html">Historial</a>
   </div>
-</div>
+  <nav>
+    <a href="#inicio" data-vista="inicio"><span class="punto"></span>Todas las cuentas</a>
+    <div class="seccion-lat">Clientes</div>
+    {% for r in reportes %}{% set alta = r.plan.acciones|selectattr("prioridad", "equalto", "alta")|list|length %}
+    <a href="#{{ r.cliente.slug }}" data-vista="{{ r.cliente.slug }}"><span class="punto {{ r.analisis.estado }}"></span>{{ r.cliente.nombre }}{% if alta %}<span class="cnt" title="Cambios de prioridad alta">{{ alta }}</span>{% endif %}</a>
+    {% endfor %}
+  </nav>
+</aside>
 
-<div class="tarjeta">
-  <h2 style="margin-top:0">Resumen de todas las cuentas</h2>
-  <div class="tabla-scroll"><table>
-    <tr><th>Cliente</th><th>Estado</th><th class="n">Inversión</th><th class="n">Var.</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CPA obj.</th><th class="n">ROAS</th><th class="n">Alcance org.</th><th class="n">Cambios</th></tr>
-    {% for r in reportes %}{% set a = r.m.ads.actual if r.m.ads else None %}
-    <tr>
-      <td><a href="#{{ r.cliente.slug }}">{{ r.cliente.nombre }}</a></td>
-      <td><span class="estado {{ r.analisis.estado }}" style="padding:0;font-size:12px">{{ r.analisis.estado_texto }}</span></td>
-      <td class="n">{{ a.gasto|moneda(r.cliente.moneda) if a else "—" }}</td>
-      <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.gasto) }}">{{ r.m.ads.var.gasto|var }}</span>{% endif %}</td>
-      <td class="n">{{ a.resultados|num if a else "—" }}</td>
-      <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.cpa, False) }}">{{ a.cpa|moneda(r.cliente.moneda) }}</span>{% else %}—{% endif %}</td>
-      <td class="n">{{ r.cliente.cpa_objetivo|moneda(r.cliente.moneda) if r.cliente.cpa_objetivo else "—" }}</td>
-      <td class="n">{{ a.roas|num(2) if a and a.roas else "—" }}</td>
-      <td class="n">{{ ((r.m.instagram.alcance or 0) + (r.m.facebook.alcance or 0) if (r.m.instagram or r.m.facebook) else None)|compacto }}</td>
-      <td class="n">{% set alta = r.plan.acciones|selectattr("prioridad", "equalto", "alta")|list|length %}{{ r.plan.acciones|length }}{% if alta %} <span class="chip p-alta">{{ alta }} alta</span>{% endif %}</td>
-    </tr>{% endfor %}
-  </table></div>
-</div>
+<main>
+<!-- =============================== TODAS LAS CUENTAS -->
+<section class="vista" id="v-inicio" data-titulo="Todas las cuentas">
+  <div class="cabecera"><h1>Todas las cuentas</h1></div>
+  <div class="sub-cab">{{ periodo.titulo }} · comparado con {{ periodo.etiqueta_anterior }}</div>
+  <div class="tarjeta">
+    <div class="tabla-scroll"><table>
+      <tr><th>Cliente</th><th>Estado</th><th class="n">Inversión</th><th class="n">Var.</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CPA obj.</th><th class="n">ROAS</th><th class="n">Cambios</th></tr>
+      {% for r in reportes %}{% set a = r.m.ads.actual if r.m.ads else None %}{% set alta = r.plan.acciones|selectattr("prioridad", "equalto", "alta")|list|length %}
+      <tr>
+        <td><a href="#{{ r.cliente.slug }}">{{ r.cliente.nombre }}</a></td>
+        <td><span class="estado {{ r.analisis.estado }}" style="padding:0;font-size:12px">{{ r.analisis.estado_texto }}</span></td>
+        <td class="n">{{ a.gasto|moneda(r.cliente.moneda) if a else "—" }}</td>
+        <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.gasto) }}">{{ r.m.ads.var.gasto|var }}</span>{% endif %}</td>
+        <td class="n">{{ a.resultados|num if a else "—" }}</td>
+        <td class="n">{% if a %}<span class="var {{ clase_var(r.m.ads.var.cpa, False) }}">{{ a.cpa|moneda(r.cliente.moneda) }}</span>{% else %}—{% endif %}</td>
+        <td class="n">{{ r.cliente.cpa_objetivo|moneda(r.cliente.moneda) if r.cliente.cpa_objetivo else "—" }}</td>
+        <td class="n">{{ a.roas|num(2) if a and a.roas else "—" }}</td>
+        <td class="n">{{ r.plan.acciones|length }}{% if alta %} <span class="chip p-alta">{{ alta }} alta</span>{% endif %}</td>
+      </tr>{% endfor %}
+    </table></div>
+  </div>
+  <div class="tarjeta">
+    <h2>Lo más urgente</h2>
+    <div class="top-acc">
+      {% set hay = namespace(v=False) %}
+      {% for r in reportes %}{% for x in r.plan.acciones if x.prioridad == "alta" %}{% if loop.index <= 3 %}{% set hay.v = True %}
+      <a href="#{{ r.cliente.slug }}/plan"><span class="chip p-alta">ALTA</span><span><b>{{ r.cliente.nombre }}</b> · {{ x.tipo }}: {{ x.anuncio or x.conjunto or x.campana }}<br><span class="nota">{{ x.impacto or x.que }}</span></span></a>
+      {% endif %}{% endfor %}{% endfor %}
+      {% if not hay.v %}<p class="vacio">No hay cambios de prioridad alta en ninguna cuenta. 🎉</p>{% endif %}
+    </div>
+  </div>
+</section>
 
-{% for r in reportes %}{% set mon = r.cliente.moneda %}
-<div class="tarjeta" id="{{ r.cliente.slug }}">
-<details {% if r.analisis.estado in ["rojo", "amarillo"] %}open{% endif %}>
-  <summary><h2>{{ r.cliente.nombre }}</h2><span class="estado {{ r.analisis.estado }}">{{ r.analisis.estado_texto }}</span>
-    <span class="meta">{{ r.cliente.objetivo_legible }}</span></summary>
-  {% if r.ia.interno %}<div class="caja"><b>Lectura rápida (IA):</b> {{ r.ia.interno }}</div>{% endif %}
+<!-- =============================== UNA VISTA POR CLIENTE -->
+{% for r in reportes %}{% set mon = r.cliente.moneda %}{% set c = r.cliente %}
+<section class="vista" id="v-{{ c.slug }}" data-titulo="{{ c.nombre }}">
+  <div class="cabecera"><h1>{{ c.nombre }}</h1><span class="estado {{ r.analisis.estado }}">{{ r.analisis.estado_texto }}</span></div>
+  <div class="sub-cab">{{ c.objetivo_legible }}{% if c.cpa_objetivo %} · CPA objetivo {{ c.cpa_objetivo|moneda(mon) }}{% endif %}{% if c.roas_objetivo %} · ROAS objetivo {{ c.roas_objetivo|num(1) }}{% endif %}{% if c.presupuesto_mensual %} · Presupuesto {{ c.presupuesto_mensual|moneda(mon) }}/mes{% endif %}</div>
+
   {% if r.m.ads %}{% set a = r.m.ads.actual %}{% set v = r.m.ads.var %}
   <div class="kpis">
     <div class="kpi"><div class="etq">Inversión</div><div class="val">{{ a.gasto|moneda(mon) }}</div><div class="var {{ clase_var(v.gasto) }}">{{ v.gasto|var }}</div></div>
@@ -59,46 +129,201 @@
     <div class="kpi"><div class="etq">CPA</div><div class="val">{{ a.cpa|moneda(mon) }}</div><div class="var {{ clase_var(v.cpa, False) }}">{{ v.cpa|var }}</div></div>
     {% if a.roas %}<div class="kpi"><div class="etq">ROAS</div><div class="val">{{ a.roas|num(2) }}</div><div class="var {{ clase_var(v.roas) }}">{{ v.roas|var }}</div></div>{% endif %}
     <div class="kpi"><div class="etq">CTR enlace</div><div class="val">{{ a.ctr|pct(2) }}</div><div class="var {{ clase_var(v.ctr) }}">{{ v.ctr|var }}</div></div>
-    <div class="kpi"><div class="etq">CPM</div><div class="val">{{ a.cpm|moneda(mon) }}</div><div class="var {{ clase_var(v.cpm, False) }}">{{ v.cpm|var }}</div></div>
     <div class="kpi"><div class="etq">Frecuencia</div><div class="val">{{ a.frecuencia|num(2) }}</div><div class="var {{ clase_var(v.frecuencia, False) }}">{{ v.frecuencia|var }}</div></div>
   </div>
-  <div class="dos-col">
-    {{ grafico(r.graficos.gasto_diario, "Inversión diaria") }}
-    {{ grafico(r.graficos.cpa_diario, "CPA diario") }}
-  </div>
   {% endif %}
-  {% if r.plan.acciones %}
-  <h3>Plan de acción · {{ r.plan.acciones|length }} cambio(s)</h3>
-  {% for x in r.plan.acciones %}{{ accion_ficha(x, loop.index, False) }}{% endfor %}
-  {% endif %}
-  <h3>Diagnóstico general</h3>
-  {% for h in r.analisis.hallazgos if h.nivel != "ok" %}
-  <div class="hallazgo {{ h.nivel }}">
-    <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
-    <div class="d">{{ h.detalle }}</div>
-    {% if h.accion %}<div class="a"><b>Acción:</b> {{ h.accion }}</div>{% endif %}
+
+  <div class="tabs" role="tablist">
+    {% if r.m.ads %}<button data-tab="plan">Plan de acción<span class="badge">{{ r.plan.acciones|length }}</span></button>
+    <button data-tab="rendimiento">Rendimiento</button>
+    <button data-tab="estructura">Campañas y anuncios</button>{% endif %}
+    {% if r.m.instagram or r.m.facebook %}<button data-tab="organico">Orgánico</button>{% endif %}
+    <button data-tab="diagnostico">Diagnóstico</button>
   </div>
-  {% endfor %}
+
   {% if r.m.ads %}
-  <h3>Campañas</h3>
-  <div class="tabla-scroll"><table>
-    <tr><th>Campaña</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">CTR</th><th class="n">Frec.</th></tr>
-    {% for c in r.m.ads.campanas %}<tr><td>{{ c.nombre }}</td><td class="n">{{ c.gasto|moneda(mon) }}</td><td class="n">{{ c.resultados|num }}</td>
-      <td class="n">{{ c.cpa|moneda(mon) }}</td><td class="n"><span class="var {{ clase_var(c.var_cpa, False) }}">{{ c.var_cpa|var }}</span></td>
-      <td class="n">{{ c.ctr|pct(2) }}</td><td class="n">{{ c.frecuencia|num(1) }}</td></tr>{% endfor %}
-  </table></div>
-  {% endif %}
-  {% for red in ["instagram", "facebook"] %}{% set o = r.m[red] %}{% if o %}
-  <h3>{{ red|capitalize }} · {{ o.nombre }}</h3>
-  <div class="kpis">
-    {% for k, n in [("alcance","Alcance"),("interacciones","Interacciones"),("nuevos_seguidores","Seguidores nuevos")] %}{% if o[k] is not none %}
-    <div class="kpi"><div class="etq">{{ n }}</div><div class="val">{{ o[k]|compacto }}</div><div class="var {{ clase_var(o.var[k]) }}">{{ o.var[k]|var }}</div></div>{% endif %}{% endfor %}
-    <div class="kpi"><div class="etq">Engagement</div><div class="val">{{ o.engagement|pct(2) }}</div><div class="var {{ clase_var(o.var.engagement) }}">{{ o.var.engagement|var }}</div></div>
-    <div class="kpi"><div class="etq">Publicaciones</div><div class="val">{{ o.cantidad_publicaciones }}</div></div>
+  <!-- ---------- PLAN DE ACCIÓN -->
+  <div class="tab" data-tab="plan">
+    {% if r.ia.interno %}<div class="caja"><b>Lectura rápida (IA):</b> {{ r.ia.interno }}</div>{% endif %}
+    {% if r.plan.acciones %}
+    <div class="filtros">
+      <button class="activo" data-filtro="todas">Todas ({{ r.plan.acciones|length }})</button>
+      {% for pr in ["alta", "media", "baja"] %}{% set n = r.plan.acciones|selectattr("prioridad", "equalto", pr)|list|length %}{% if n %}
+      <button data-filtro="{{ pr }}">{{ pr|capitalize }} ({{ n }})</button>{% endif %}{% endfor %}
+      <button data-filtro="pendientes">Pendientes</button>
+      <span class="progreso"><span class="txt-prog">0 de {{ r.plan.acciones|length }} hechos</span><span class="barra"><i></i></span></span>
+    </div>
+    <p class="nota">Referencia de CPA: {{ r.plan.referencias.ref_txt }}{% if r.plan.referencias.mejor_formato %} · formato que mejor convierte: {{ r.plan.referencias.mejor_formato }}{% endif %}. Las casillas «Hecho» se guardan en este dispositivo.</p>
+    {% for x in r.plan.acciones %}{{ accion_ficha(x, loop.index, True, c.slug ~ "|" ~ periodo.clave ~ "|" ~ x.tipo ~ "|" ~ (x.anuncio or x.conjunto or x.campana)) }}{% endfor %}
+    {% else %}<p class="vacio">No hay cambios necesarios por anuncio, conjunto o campaña: la cuenta está dentro de los objetivos.</p>{% endif %}
   </div>
-  {% endif %}{% endfor %}
-  {% if r.m.avisos %}<p class="nota">Avisos: {{ r.m.avisos|join(" · ") }}</p>{% endif %}
-</details>
-</div>
+
+  <!-- ---------- RENDIMIENTO -->
+  <div class="tab" data-tab="rendimiento">{% set p = r.m.ads.anterior %}
+    <div class="tarjeta">
+      <div class="tabla-scroll"><table>
+        <tr><th>Métrica</th><th class="n">Actual</th><th class="n">Anterior</th><th class="n">Var.</th></tr>
+        {% for nombre, act_, ant_, var_, sube in [
+          ("Inversión", a.gasto|moneda(mon), p.gasto|moneda(mon), v.gasto, True),
+          ("Resultados (" ~ r.m.ads.resultado_plural ~ ")", a.resultados|num, p.resultados|num, v.resultados, True),
+          ("CPA", a.cpa|moneda(mon), p.cpa|moneda(mon), v.cpa, False),
+          ("ROAS", (a.roas|num(2)) if a.roas else "—", (p.roas|num(2)) if p.roas else "—", v.roas, True),
+          ("CPM", a.cpm|moneda(mon), p.cpm|moneda(mon), v.cpm, False),
+          ("CTR de enlace", a.ctr|pct(2), p.ctr|pct(2), v.ctr, True),
+          ("CPC de enlace", a.cpc|moneda(mon), p.cpc|moneda(mon), v.cpc, False),
+          ("Tasa de conversión", a.tasa_conversion|pct(2), p.tasa_conversion|pct(2), v.tasa_conversion, True),
+          ("Frecuencia", a.frecuencia|num(2), p.frecuencia|num(2), v.frecuencia, False),
+          ("Alcance", a.alcance|num, p.alcance|num, v.alcance, True),
+        ] %}
+        <tr><td>{{ nombre }}</td><td class="n">{{ act_ }}</td><td class="n">{{ ant_ }}</td><td class="n"><span class="var {{ clase_var(var_, sube) }}">{{ var_|var }}</span></td></tr>
+        {% endfor %}
+      </table></div>
+    </div>
+    <div class="tarjeta dos-col">
+      {{ grafico(r.graficos.gasto_diario, "Inversión diaria") }}
+      {{ grafico(r.graficos.cpa_diario, "CPA diario") }}
+    </div>
+    <div class="tarjeta">{{ grafico(r.graficos.campanas_gasto, "Inversión por campaña") }}</div>
+  </div>
+
+  <!-- ---------- CAMPAÑAS Y ANUNCIOS -->
+  <div class="tab" data-tab="estructura">
+    {% set senales = {} %}{% for x in r.plan.acciones if x.anuncio %}{% if (x.conjunto ~ x.anuncio) not in senales %}{% set _ = senales.update({x.conjunto ~ x.anuncio: x}) %}{% endif %}{% endfor %}
+    <div class="tarjeta"><h2>Campañas</h2><div class="tabla-scroll"><table>
+      <tr><th>Campaña</th><th class="n">Presupuesto</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">ROAS</th><th class="n">CTR</th><th class="n">Frec.</th></tr>
+      {% for x in r.m.ads.campanas %}<tr><td>{{ x.nombre }}</td>
+        <td class="n">{% if x.presupuesto %}{{ x.presupuesto|moneda(mon) }}{{ "/día" if x.tipo_presupuesto == "diario" else " total" }}{% else %}<span class="nota">en conjuntos</span>{% endif %}</td>
+        <td class="n">{{ x.gasto|moneda(mon) }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td>
+        <td class="n"><span class="var {{ clase_var(x.var_cpa, False) }}">{{ x.var_cpa|var }}</span></td>
+        <td class="n">{{ x.roas|num(2) if x.roas else "—" }}</td><td class="n">{{ x.ctr|pct(2) }}</td><td class="n">{{ x.frecuencia|num(1) }}</td></tr>{% endfor %}
+    </table></div></div>
+    <div class="tarjeta"><h2>Conjuntos de anuncios</h2><div class="tabla-scroll"><table>
+      <tr><th>Conjunto</th><th class="n">Presupuesto</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">Var. CPA</th><th class="n">Frec.</th><th class="n">Anuncios</th><th>Aprendizaje</th></tr>
+      {% for x in r.m.ads.conjuntos %}<tr><td>{{ x.nombre }}<div class="nota">{{ x.campana }}</div></td>
+        <td class="n">{% if x.presupuesto %}{{ x.presupuesto|moneda(mon) }}{{ "/día" if x.tipo_presupuesto == "diario" else " total" }}{% elif x.presupuesto_en_campana %}<span class="nota">de campaña</span>{% else %}—{% endif %}</td>
+        <td class="n">{{ x.gasto|moneda(mon) }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td>
+        <td class="n"><span class="var {{ clase_var(x.var_cpa, False) }}">{{ x.var_cpa|var }}</span></td>
+        <td class="n">{{ x.frecuencia|num(1) }}</td><td class="n">{{ x.anuncios_activos }}</td>
+        <td class="nota">{{ {"SUCCESS": "Completo", "LEARNING": "En aprendizaje", "FAIL": "Limitado"}.get(x.aprendizaje, "—") }}</td></tr>{% endfor %}
+    </table></div></div>
+    <div class="tarjeta"><h2>Anuncios</h2><div class="tabla-scroll"><table>
+      <tr><th>Anuncio</th><th>Formato</th><th class="n">Inversión</th><th class="n">Result.</th><th class="n">CPA</th><th class="n">CTR</th><th class="n">Gancho 3 s</th><th class="n">Frec.</th><th>Cambio sugerido</th></tr>
+      {% for x in r.m.ads.anuncios %}{% set acc = senales.get(x.conjunto ~ x.nombre) %}
+      <tr><td>{{ x.nombre }}<div class="nota">{{ x.conjunto }}</div></td><td class="nota">{{ x.formato }}</td>
+        <td class="n">{{ x.gasto|moneda(mon) }}</td><td class="n">{{ x.resultados|num }}</td><td class="n">{{ x.cpa|moneda(mon) }}</td>
+        <td class="n">{{ x.ctr|pct(2) }}</td><td class="n">{{ x.hook_rate|pct(0) if x.hook_rate else "—" }}</td><td class="n">{{ x.frecuencia|num(1) }}</td>
+        <td>{% if acc %}<a href="#{{ c.slug }}/plan"><span class="chip p-{{ acc.prioridad }}">{{ acc.tipo }}</span></a>{% endif %}</td></tr>
+      {% endfor %}
+    </table></div></div>
+  </div>
+  {% endif %}
+
+  <!-- ---------- ORGÁNICO -->
+  {% if r.m.instagram or r.m.facebook %}
+  <div class="tab" data-tab="organico">
+    {% for red in ["instagram", "facebook"] %}{% set o = r.m[red] %}{% if o %}
+    <div class="tarjeta">
+      <h2>{{ red|capitalize }} · {{ o.nombre }}</h2>
+      <div class="kpis">
+        {% for k, n in [("seguidores","Seguidores"),("nuevos_seguidores","Seguidores nuevos"),("alcance","Alcance"),("interacciones","Interacciones")] %}{% if o[k] is not none %}
+        <div class="kpi"><div class="etq">{{ n }}</div><div class="val">{{ o[k]|compacto }}</div>{% if o.var[k] is not none %}<div class="var {{ clase_var(o.var[k]) }}">{{ o.var[k]|var }}</div>{% endif %}</div>{% endif %}{% endfor %}
+        <div class="kpi"><div class="etq">Engagement</div><div class="val">{{ o.engagement|pct(2) }}</div><div class="var {{ clase_var(o.var.engagement) }}">{{ o.var.engagement|var }}</div></div>
+        <div class="kpi"><div class="etq">Publicaciones</div><div class="val">{{ o.cantidad_publicaciones }}</div></div>
+      </div>
+      {{ grafico(r.graficos[red ~ "_formatos"], "Interacciones promedio por formato") }}
+      {% if o.top %}<h3>Mejores publicaciones</h3>
+      <div class="tabla-scroll"><table><tr><th>Publicación</th><th>Formato</th><th class="n">Interacciones</th><th class="n">Alcance</th></tr>
+      {% for po in o.top %}<tr><td>{% if po.link %}<a href="{{ po.link }}" target="_blank" rel="noopener">{{ (po.texto or "Sin texto")[:80] }}</a>{% else %}{{ (po.texto or "Sin texto")[:80] }}{% endif %}</td>
+        <td>{{ po.tipo|tipo }}</td><td class="n">{{ po.interacciones|num }}</td><td class="n">{{ po.alcance|compacto if po.alcance else "—" }}</td></tr>{% endfor %}
+      </table></div>{% endif %}
+    </div>
+    {% endif %}{% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ---------- DIAGNÓSTICO -->
+  <div class="tab" data-tab="diagnostico">
+    {% for h in r.analisis.hallazgos %}
+    <div class="hallazgo {{ h.nivel }}">
+      <div><span class="chip {{ h.nivel }}">{{ h.nivel|upper }}</span> <span class="chip">{{ h.area }}</span> <span class="t">{{ h.titulo }}</span></div>
+      <div class="d">{{ h.detalle }}</div>
+      {% if h.accion %}<div class="a"><b>Acción:</b> {{ h.accion }}</div>{% endif %}
+    </div>
+    {% else %}<p class="vacio">Sin observaciones.</p>{% endfor %}
+    <h3>Lo que ve el cliente en su PDF</h3>
+    <div class="caja"><ul>{% for l in r.analisis.resumen_cliente %}<li>{{ l }}</li>{% endfor %}</ul>
+      <b>Próximos pasos:</b><ul>{% for l in r.analisis.proximos_pasos_cliente %}<li>{{ l }}</li>{% endfor %}</ul></div>
+    {% if r.m.avisos %}<p class="nota">Avisos técnicos: {{ r.m.avisos|join(" · ") }}</p>{% endif %}
+  </div>
+</section>
 {% endfor %}
-</div></body></html>
+</main>
+</div>
+
+<script>
+(function () {
+  const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const leer = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+  function mostrar() {
+    const [vista, tab] = (location.hash.slice(1) || "inicio").split("/");
+    const sec = document.getElementById("v-" + vista) || document.getElementById("v-inicio");
+    document.querySelectorAll(".vista").forEach(v => v.classList.toggle("activa", v === sec));
+    document.querySelectorAll(".lateral nav a").forEach(a => a.classList.toggle("activo", "v-" + a.dataset.vista === sec.id));
+    document.getElementById("titulo-movil").textContent = sec.dataset.titulo;
+    const botones = sec.querySelectorAll(".tabs button");
+    if (botones.length) {
+      const elegido = [...botones].find(b => b.dataset.tab === tab) || botones[0];
+      botones.forEach(b => b.classList.toggle("activo", b === elegido));
+      sec.querySelectorAll(".tab").forEach(t => t.classList.toggle("activa", t.dataset.tab === elegido.dataset.tab));
+    }
+    document.getElementById("lateral").classList.remove("abierto");
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", mostrar);
+
+  document.querySelectorAll(".vista").forEach(sec => {
+    const id = sec.id.slice(2);
+    sec.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+      location.hash = id + "/" + b.dataset.tab;
+    }));
+    // Filtros y progreso del plan
+    const fichas = [...sec.querySelectorAll(".accion[data-clave]")];
+    const filtros = sec.querySelectorAll(".filtros button");
+    let filtro = "todas";
+    function actualizar() {
+      let hechos = 0;
+      fichas.forEach(f => {
+        const ok = f.querySelector("input").checked;
+        if (ok) hechos++;
+        f.classList.toggle("completa", ok);
+        f.classList.toggle("oculta", !(filtro === "todas" || f.dataset.prioridad === filtro || (filtro === "pendientes" && !ok)));
+      });
+      const txt = sec.querySelector(".txt-prog"), barra = sec.querySelector(".barra i");
+      if (txt) txt.textContent = hechos + " de " + fichas.length + " hechos";
+      if (barra) barra.style.width = (fichas.length ? 100 * hechos / fichas.length : 0) + "%";
+    }
+    fichas.forEach(f => {
+      const cb = f.querySelector("input");
+      cb.checked = leer("hecho:" + cb.dataset.clave) === "1";
+      cb.addEventListener("change", () => { guardar("hecho:" + cb.dataset.clave, cb.checked ? "1" : "0"); actualizar(); });
+    });
+    filtros.forEach(b => b.addEventListener("click", () => {
+      filtro = b.dataset.filtro;
+      filtros.forEach(x => x.classList.toggle("activo", x === b));
+      actualizar();
+    }));
+    actualizar();
+  });
+
+  document.getElementById("abrir-menu").addEventListener("click", e => {
+    e.stopPropagation(); document.getElementById("lateral").classList.toggle("abierto");
+  });
+  document.addEventListener("click", e => {
+    const lat = document.getElementById("lateral");
+    if (lat.classList.contains("abierto") && !lat.contains(e.target)) lat.classList.remove("abierto");
+  });
+  mostrar();
+})();
+</script>
+</body></html>

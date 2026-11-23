@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import traceback
@@ -37,8 +38,10 @@ def generar_cliente(c: Cliente, p: periodos.Periodo, demo: bool) -> dict:
     ctx = dict(cliente=c, periodo=p, m=m, analisis=a, plan=plan, ia=textos_ia, graficos=g)
     carpeta = SALIDA / p.clave
     pdf_cliente = render.a_pdf(render.html("cliente.html.j2", **ctx), carpeta / f"{c.slug}-cliente-{p.clave}.pdf")
-    pdf_interno = render.a_pdf(render.html("interno.html.j2", **ctx), carpeta / f"{c.slug}-INTERNO-{p.clave}.pdf")
-    return {**ctx, "pdfs": [pdf_cliente, pdf_interno]}
+    pdfs = [pdf_cliente]
+    if os.environ.get("PDF_INTERNO") == "1":  # opcional: tu vista principal es el panel web
+        pdfs.append(render.a_pdf(render.html("interno.html.j2", **ctx), carpeta / f"{c.slug}-INTERNO-{p.clave}.pdf"))
+    return {**ctx, "pdfs": pdfs}
 
 
 def cuerpo_mail(p, reportes, errores, url_panel) -> str:
@@ -57,13 +60,16 @@ def cuerpo_mail(p, reportes, errores, url_panel) -> str:
                   f'<td style="padding:8px;border-bottom:1px solid #eee;font-size:13px">'
                   + "<br>".join(f"• {t}" for t in prioridades) + "</td></tr>")
     err = "".join(f"<li>{e}</li>" for e in errores)
-    enlace = f'<p><a href="{url_panel}">Abrir el panel online</a> (pide tu contraseña).</p>' if url_panel else ""
+    enlace = (f'<p><a href="{url_panel}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 18px;'
+              f'border-radius:8px;text-decoration:none;font-weight:600">Abrir el panel y el plan de acción →</a></p>'
+              if url_panel else "")
     return f"""<div style="font-family:Segoe UI,Arial,sans-serif;max-width:720px">
 <h2 style="margin:0 0 4px">{p.titulo}</h2><p style="color:#555">{len(reportes)} cliente(s) procesados.</p>{enlace}
 <table style="border-collapse:collapse;width:100%"><tr style="text-align:left;color:#777;font-size:12px">
 <th style="padding:8px">Cliente</th><th style="padding:8px;text-align:right">Inversión</th><th style="padding:8px">Prioridades</th></tr>{filas}</table>
 {"<h3>Errores</h3><ul>" + err + "</ul>" if err else ""}
-<p style="color:#777;font-size:12px">Adjuntos: el PDF para cada cliente (listo para reenviar), el PDF INTERNO con el diagnóstico y el panel en HTML.</p></div>"""
+<p style="color:#777;font-size:12px">Adjuntos: el PDF de cada cliente, listo para reenviar.
+El plan de acción completo está en el panel{"" if url_panel else " (va adjunto como archivo HTML: abrilo con el navegador)"}.</p></div>"""
 
 
 def cmd_generar(args):
@@ -94,10 +100,11 @@ def cmd_generar(args):
     panel_local = panel.publicar(p, reportes)
     print(f" ✔ Panel: {panel_local}")
     if not args.sin_mail:
-        import os
         url = os.environ.get("PANEL_URL")
         url = f"{url.rstrip('/')}/{p.tipo}.html" if url else None
-        adjuntos = [pdf for r in reportes for pdf in r["pdfs"]] + ([panel_local] if panel_local else [])
+        adjuntos = [pdf for r in reportes for pdf in r["pdfs"]]
+        if panel_local and not url:  # sin panel online, el panel va adjunto
+            adjuntos.append(panel_local)
         prefijo = "[DEMO] " if args.demo else ""
         correo.enviar(f"{prefijo}Reportes Meta · {p.titulo}", cuerpo_mail(p, reportes, errores, url), adjuntos)
     print(f" ✔ Listo. Archivos en {SALIDA / p.clave}")

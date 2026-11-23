@@ -2,14 +2,16 @@
 
 Genera automáticamente, para cada cliente:
 
-| Qué | Para quién | Contenido |
+| Qué | Para quién | Formato |
 |---|---|---|
-| **PDF del cliente** | Para reenviar al cliente | Resumen en lenguaje simple, KPIs con explicación, gráficos, mejores anuncios y publicaciones, próximos pasos y glosario. Con el color y el logo del cliente. |
-| **PDF INTERNO** | Para vos | **Plan de acción**: qué cambiar en cada campaña, conjunto y anuncio, cómo y por qué. Además, el diagnóstico general, las métricas completas con variaciones, las tablas de campañas, conjuntos y anuncios, y el detalle del orgánico. |
-| **Panel web** | Para vos | Todas las cuentas en una sola pantalla, protegido con contraseña, con historial. |
+| **PDF del cliente** | Para reenviar al cliente | Documento PDF con resumen en lenguaje simple, KPIs explicados, gráficos, mejores anuncios y publicaciones, próximos pasos y glosario. Lleva el color y el logo del cliente. |
+| **Panel de reportes** | Para vos | **Aplicación web** (no es un documento) con un menú de clientes a la izquierda y pestañas para cada uno: **Plan de acción**, Rendimiento, Campañas y anuncios, Orgánico y Diagnóstico. Está protegida con contraseña, funciona en el celular y tiene historial. |
+
+En el panel, cada cambio del plan de acción tiene una casilla **"Hecho"** para ir marcando lo que ya hiciste (se guarda en ese dispositivo), con filtros por prioridad o pendientes y una barra de progreso.
+La pantalla **"Todas las cuentas"** muestra el estado de cada cliente y los cambios más urgentes de todos.
 
 - **Cuándo:** el semanal sale todos los lunes (semana anterior, de lunes a domingo) y el mensual el día 1 (mes anterior). En los dos casos se compara contra el período anterior.
-- **Cómo llega:** te llega un mail con todos los PDF adjuntos y un resumen de prioridades por cliente.
+- **Cómo llega:** te llega un mail con un botón para abrir el panel, el PDF de cada cliente adjunto y los 3 cambios más urgentes de cada uno.
 - **Costo:** $0. Corre gratis en GitHub Actions.
 
 ---
@@ -59,6 +61,7 @@ En la pestaña **Variables**, también podés cargar:
 |---|---|
 | `PANEL_URL` | La dirección del panel (paso 5), para que el mail incluya el link |
 | `META_API_VERSION` | *(opcional)* Versión de la API, por ejemplo `v23.0` |
+| `PDF_INTERNO` | *(opcional)* Poné `1` si además del panel querés recibir el diagnóstico interno en PDF |
 
 ### 5. Activar el panel web
 
@@ -96,7 +99,7 @@ Solo funciona si el issue lo abrís vos, la dueña del repo. Si lo abre otra per
 
 ---
 
-## Plan de acción para Meta Ads (en el PDF interno y en el panel)
+## Plan de acción para Meta Ads (en el panel)
 
 Cada cambio recomendado viene en una ficha con:
 
