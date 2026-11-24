@@ -186,6 +186,11 @@ input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
 .tool.danger{color:var(--danger)}
 .tool.back{min-width:46px;color:var(--mut)}
 .tool.back span{display:none}
+.ctxbar{position:absolute;z-index:3;display:flex;gap:2px;background:var(--panel3);border:1px solid var(--line);border-radius:12px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);white-space:nowrap;left:0;top:0}
+.ctxbar button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;color:var(--fg);font-size:10.5px;font-weight:700;padding:6px 7px;border-radius:8px;min-width:50px}
+.ctxbar button:hover,.ctxbar button:active{background:var(--panel2)}
+.ctxbar button svg{width:19px;height:19px}
+.ctxbar .danger{color:var(--danger)}
 .chip-q{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:7px 10px;font-weight:700;font-size:12px;white-space:nowrap}
 .chip-q:hover{background:var(--panel3)}
 
@@ -261,6 +266,7 @@ input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
     <section class="panel stage">
       <div class="cwrap" id="cwrap">
         <canvas id="cv" width="540" height="960"></canvas>
+        <div class="ctxbar" id="ctxbar" hidden></div>
         <div class="empty-stage" id="emptyStage"><div>
           <h2 id="emptyTitle">Conectando con tu biblioteca…</h2>
           <p class="hint" id="emptyText">Acá aparecen todos los videos que Claude te arma, en cualquier chat.</p>
@@ -484,7 +490,7 @@ function drawImagen(c,W,H,T,it,hits){
   c.save();c.globalAlpha=A.al*((it.op??100)/100);c.translate(cx,cy);if(rot)c.rotate(rot*Math.PI/180);c.drawImage(im,-w/2,-h/2,w,h);c.restore();
   if(hits)hits.push({id:it.id,kind:'elem',cx,cy,w,h,rot});
 }
-function draw(){if(!S.E)return;S.hits=[];drawFrame(ctx,cv.width,cv.height,S.T,{preview:true,hits:S.hits})}
+function draw(){if(!S.E)return;S.hits=[];drawFrame(ctx,cv.width,cv.height,S.T,{preview:true,hits:S.hits});posCtx()}
 
 /* ============ reproducción ============ */
 function onMeta(){
@@ -724,7 +730,7 @@ async function borrarProyecto(pid){
 
 /* ============ edición ============ */
 function selItem(){if(!S.sel||!S.E)return null;const {k,id}=S.sel;if(k==='sub')return S.E.subs.find(x=>x.id===id);if(k==='elem')return S.E.elems.find(x=>x.id===id);if(k==='clip')return S.E.clips.find(x=>x.id===id);if(k==='sfx')return S.E.audio.sfx.find(x=>x.id===id);return null}
-function select(k,id,tab){S.sel=k?{k,id}:null;if(tab)setTab(tab,false);renderTimeline();renderInspector();renderToolbar();S.needDraw=true}
+function select(k,id,tab){S.sel=k?{k,id}:null;if(k==='sub'||k==='elem'){const it=selItem();if(it&&(S.T<it.a||S.T>=it.b)){S.T=clamp(it.a+0.01,0,dur());if(S.playing)pause();syncVideo(S.T);updateTC()}}if(tab)setTab(tab,false);renderTimeline();renderInspector();renderToolbar();S.needDraw=true}
 function splitAt(T){const L=locate(T);if(!L)return;if(L.lt<0.1||L.o.len-L.lt<0.1){toast('Mové el cursor dentro de un clip para dividirlo.');return}
   commit(()=>{const c=L.o.c,nc={id:uid(),ini:L.s,fin:c.fin};c.fin=L.s;S.E.clips.splice(L.i+1,0,nc);S.sel={k:'clip',id:nc.id}})}
 function borrarSel(){const s=S.sel;if(!s||!S.E)return;
@@ -833,7 +839,7 @@ function estiloHTML(key,it){const e=it.est;
   <div class="f"><label>Sombra</label><input type="checkbox" data-bind="${key}|est.sombra" data-type="bool" ${e.sombra?'checked':''}><span></span></div>
   <div class="f"><label>Fondo</label><select data-bind="${key}|est.fondo" data-rerender="1">${opt([['ninguno','Sin fondo'],['caja','Caja detrás']],e.fondo)}</select>${e.fondo==='caja'?`<input type="color" data-bind="${key}|est.colorFondo" value="${e.colorFondo}" aria-label="Color del fondo">`:'<span></span>'}</div>
   ${e.fondo==='caja'?rng_('Opacidad fondo',key+'|est.opFondo',e.opFondo,0,100,1,'%'):''}
-  <div class="f"><label>Animación</label><select data-bind="${key}|est.anim" data-rerender="1">${opt(ANIMS,e.anim)}</select><span></span></div>
+  <div class="f" id="sec-anim"><label>Animación</label><select data-bind="${key}|est.anim" data-rerender="1">${opt(ANIMS,e.anim)}</select><span></span></div>
   ${e.anim==='karaoke'?`<div class="f"><label>Resaltado</label><input type="color" data-bind="${key}|est.resaltado" value="${e.resaltado}" aria-label="Color de resaltado"><span></span></div>`:''}
   ${rng_('Ancho máx.',key+'|est.ancho',e.ancho,30,100,1,'%')}
   <div class="f"><label>Alineación</label><select data-bind="${key}|est.alin">${opt([['center','Centro'],['left','Izquierda'],['right','Derecha']],e.alin)}</select><span></span></div>
@@ -1049,7 +1055,17 @@ function renderToolbar(){const tb=$('#toolbar');const s=S.sel,it=selItem();const
   else if(s?.k==='trans')h=b('deselect','back','','back')+b('hTrans','trans','Transición');
   else if(s&&(s.k==='sfx'||s.k==='mus'))h=b('deselect','back','','back')+b('hAudio','vol','Volumen')+b('borrarSel','trash','Eliminar','danger');
   else h=b('hVideos','grid','Videos')+b('hTrans','scissors','Editar')+b('hAudio','note','Audio')+b('hTextos','text','Texto')+b('hSubs','captions','Subtítulos')+b('hSonidos','spark','Sonidos')+b('hFiltros','filter','Filtros')+b('hCalidad','hd','Calidad');
-  tb.innerHTML=h}
+  tb.innerHTML=h;renderCtx()}
+function renderCtx(){const cb=$('#ctxbar'),s=S.sel,it=selItem();if(!S.E||!s||!(s.k==='sub'||s.k==='elem')||!it){cb.hidden=true;cb.innerHTML='';return}
+  const b=(act,ic,lab,cls='')=>`<button class="${cls}" data-act="${act}" aria-label="${lab}">${TI[ic]}<span>${lab}</span></button>`;const img=it.tipo==='imagen';
+  cb.innerHTML=(img?b('hPos','move','Tamaño'):b('hTexto','pencil','Editar')+b('hEstilo','palette','Estilo')+b('hAnim','spark','Animación'))+b('duplicar','copy','Duplicar')+b('borrarSel','trash','Eliminar','danger');cb.dataset.id=it.id;posCtx()}
+function posCtx(){const cb=$('#ctxbar');if(!cb.innerHTML||!S.sel){cb.hidden=true;return}const h=S.hits.find(x=>x.id===S.sel.id);
+  if(!h||S.exporting||(gest&&gest.movido)){cb.hidden=true;return}cb.hidden=false;
+  const w=$('#cwrap'),wr=w.getBoundingClientRect(),cr=cv.getBoundingClientRect(),k=cv.width/cr.width,a=(h.rot||0)*Math.PI/180;
+  const ex=Math.abs(h.w/2*Math.cos(a))+Math.abs(h.h/2*Math.sin(a)),ey=Math.abs(h.w/2*Math.sin(a))+Math.abs(h.h/2*Math.cos(a));
+  const ox=cr.left-wr.left,oy=cr.top-wr.top,bw=cb.offsetWidth,bh=cb.offsetHeight;
+  let x=ox+h.cx/k-bw/2,y=oy+(h.cy-ey)/k-bh-14;if(y<4)y=oy+(h.cy+ey)/k+22;
+  x=clamp(x,4,Math.max(4,wr.width-bw-4));y=clamp(y,4,Math.max(4,wr.height-bh-4));cb.style.transform=`translate(${Math.round(x)}px,${Math.round(y)}px)`}
 function abrirHoja(tab,sec){setTab(tab);if(esMovil()){$('#biblio').classList.remove('open');$('#insp').classList.add('open')}if(sec)setTimeout(()=>document.getElementById(sec)?.scrollIntoView({block:'start',behavior:'smooth'}),60)}
 function abrirLib(){if(esMovil())$('#insp').classList.remove('open');$('#biblio').classList.add('open')}
 function cerrarHojas(){$('#biblio').classList.remove('open');$('#insp').classList.remove('open')}
@@ -1059,7 +1075,7 @@ Object.assign(ACT,{
   abrirEfectos:()=>{S.sndCat='Todos';setLib('sonidos');abrirLib()},abrirMusica:()=>{S.sndCat='Música';setLib('sonidos');abrirLib()},
   hTrans:()=>abrirHoja('trans'),hAudio:()=>abrirHoja('audio'),hTextos:()=>abrirHoja('textos'),hSubs:()=>abrirHoja('subs'),hFiltros:()=>abrirHoja('filtros'),hCalidad:()=>abrirHoja('calidad'),
   hTexto:()=>{const it=selItem();if(it)editarTexto2(it)},
-  hEstilo:()=>abrirHoja(S.sel.k==='sub'?'subs':'textos','sec-estilo'),hPos:()=>abrirHoja(S.sel.k==='sub'?'subs':'textos','sec-pos'),
+  hEstilo:()=>abrirHoja(S.sel.k==='sub'?'subs':'textos','sec-estilo'),hPos:()=>abrirHoja(S.sel.k==='sub'?'subs':'textos','sec-pos'),hAnim:()=>abrirHoja(S.sel.k==='sub'?'subs':'textos','sec-anim'),
   duplicar:()=>{const it=selItem();if(!it)return;const k=S.sel.k;commit(()=>{const c=JSON.parse(JSON.stringify(it));c.id=uid();if(k==='sub'){const len=it.b-it.a;c.a=Math.min(it.b,dur()-0.1);c.b=Math.min(dur(),c.a+len);S.E.subs.push(c)}else{c.y=clamp(it.y+0.06,0,1);S.E.elems.push(c)}S.sel={k,id:c.id}});toast('Duplicado.')}
 });
 $('#btnCalidad').onclick=()=>{if(S.E)abrirHoja('calidad')};
