@@ -16,4 +16,8 @@ Resumen:
 3. `ArtifactData` `list` de `proyectos` para ver si el video ya existe.
 4. `set` en `proyectos/<id>/versiones/v<n>` y después `set`/`update` en `proyectos/<id>`
    (`ultimaVersion`, `ultimoVideo`, `actualizado`). La página se actualiza sola.
-5. Mandá los subtítulos como datos (`subtitulos: [{texto, inicio, fin}]`) para que se puedan editar.
+5. **Subtítulos: OBLIGATORIO.** Subí el MP4 **sin subtítulos quemados** (renderizá una versión
+   limpia, aunque entregues a la usuaria otra con subtítulos) y mandá **todos** los subtítulos como
+   datos en `subtitulos: [{texto, inicio, fin, x, y, estilo}]`. Así aparecen en la línea de tiempo
+   del Estudio y ella los edita y los mueve. Nunca subas `subtitulos: []` si el video tiene habla o texto.
+   Los estilos disponibles (incluido el efecto `neon-dorado`) están en PROTOCOLO.md.

@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800;900&family=Poppins:wght@400;600;800;900&family=Inter:wght@400;700;900&family=Anton&family=Bebas+Neue&family=Archivo+Black&family=Playfair+Display:wght@400;700;900&family=Permanent+Marker&family=Bangers&family=Oswald:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800;900&family=Poppins:wght@400;600;800;900&family=Inter:wght@400;700;900&family=Anton&family=Bebas+Neue&family=Archivo+Black&family=Playfair+Display:wght@400;700;900&family=Permanent+Marker&family=Bangers&family=Oswald:wght@400;600;700&family=Yellowtail&family=Kaushan+Script&family=Pacifico&family=Dancing+Script:wght@700&display=swap">
 <style>
 /* Layout: a dark editing bay, always dark. Desktop: library | monitor | inspector over the timeline.
    Phone: monitor, centered-playhead timeline and a tool bar; panels slide up as sheets. */
@@ -191,6 +191,14 @@ input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
 .ctxbar button:hover,.ctxbar button:active{background:var(--panel2)}
 .ctxbar button svg{width:19px;height:19px}
 .ctxbar .danger{color:var(--danger)}
+.fmt{display:flex;gap:4px}
+.fmt button{width:38px;height:32px;border:1px solid var(--line);background:var(--panel2);border-radius:7px;font-size:15px;font-family:Georgia,serif}
+.fmt button.on{background:var(--acc);color:var(--acc-ink);border-color:transparent}
+.efxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.efx{border:2px solid var(--line);background:#101116;border-radius:9px;padding:6px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.efx span{font-family:'Yellowtail',cursive;font-size:24px;line-height:1.1}
+.efx small{font-size:10px;color:var(--mut);font-weight:600}
+.efx.on{border-color:var(--acc)}
 .chip-q{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:7px 10px;font-weight:700;font-size:12px;white-space:nowrap}
 .chip-q:hover{background:var(--panel3)}
 
@@ -348,17 +356,21 @@ const S={db:null,assets:null,downloads:null,user:null,
   thumbs:[],thumbTok:0,srcDur:0,menu:null,sndCat:'Todos',sndQ:'',firstProj:true};
 const LAB=86; // ancho de etiquetas del timeline
 
-const FUENTES=['Montserrat','Poppins','Anton','Bebas Neue','Archivo Black','Oswald','Inter','Playfair Display','Permanent Marker','Bangers'];
-const EST_SUB={fuente:'Montserrat',peso:800,tam:70,color:'#FFFFFF',mayus:false,contorno:'#000000',grosor:0,sombra:true,fondo:'ninguno',colorFondo:'#000000',opFondo:70,anim:'pop',resaltado:'#F5A524',ancho:86,alin:'center'};
+const FUENTES=['Montserrat','Poppins','Anton','Bebas Neue','Archivo Black','Oswald','Inter','Playfair Display','Yellowtail','Kaushan Script','Pacifico','Dancing Script','Permanent Marker','Bangers'];
+const EFX={'neon-dorado':{n:'Neón dorado',g:['#FFFDE0','#FFE97A','#FFC81E','#F2A100'],glow:'#FFB800'},'neon-rosa':{n:'Neón rosa',g:['#FFF0F8','#FF9AD5','#FF3FA4'],glow:'#FF2D95'},'neon-celeste':{n:'Neón celeste',g:['#F0FEFF','#8CEEFF','#22C6FF'],glow:'#1EB8FF'},'neon-verde':{n:'Neón verde',g:['#F2FFF0','#9DFF8A','#2EE65C'],glow:'#2BFF6A'},'fuego':{n:'Fuego',g:['#FFF07A','#FFA41F','#FF4A1F'],glow:'#FF6A00'},'oro':{n:'Oro',g:['#FFF6C9','#E9C25A','#B8862B','#F3D77E']},'plata':{n:'Plata',g:['#FFFFFF','#C9CDD6','#7D828F','#E5E7EC']},'arcoiris':{n:'Arcoíris',g:['#FF4D4D','#FFB84D','#FFF04D','#5CFF7A','#4DC3FF','#B26BFF'],dir:'h'}};
+function gradEfx(c,fx,x,y,w,size){const g=fx.dir==='h'?c.createLinearGradient(x,0,x+Math.max(1,w),0):c.createLinearGradient(0,y-size*0.45,0,y+size*0.45);fx.g.forEach((col,i)=>g.addColorStop(i/(fx.g.length-1),col));return g}
+const EST_SUB={fuente:'Montserrat',peso:800,tam:70,color:'#FFFFFF',mayus:false,contorno:'#000000',grosor:0,sombra:true,fondo:'ninguno',colorFondo:'#000000',opFondo:70,anim:'pop',resaltado:'#F5A524',ancho:86,alin:'center',efecto:'ninguno',brillo:70,cursiva:false,subrayado:false};
 const EST_TXT={...EST_SUB,fuente:'Anton',peso:400,tam:96,anim:'subir',mayus:true};
+const RESET_FX={efecto:'ninguno',cursiva:false,subrayado:false};
 const PLANTILLAS=[
-  {id:'clasico',nombre:'Clásico',est:{fuente:'Montserrat',peso:800,color:'#FFFFFF',grosor:0,sombra:true,fondo:'ninguno',anim:'pop',mayus:false}},
-  {id:'contorno',nombre:'Contorno',est:{fuente:'Montserrat',peso:900,color:'#FFFFFF',contorno:'#000000',grosor:6,sombra:false,fondo:'ninguno',anim:'pop',mayus:true}},
-  {id:'amarillo',nombre:'Amarillo',est:{fuente:'Poppins',peso:900,color:'#FFE14D',contorno:'#000000',grosor:5,sombra:true,fondo:'ninguno',anim:'pop',mayus:true}},
-  {id:'caja',nombre:'Caja',est:{fuente:'Inter',peso:700,color:'#FFFFFF',grosor:0,sombra:false,fondo:'caja',colorFondo:'#000000',opFondo:75,anim:'fundido',mayus:false}},
-  {id:'karaoke',nombre:'Karaoke',est:{fuente:'Montserrat',peso:900,color:'#FFFFFF',contorno:'#000000',grosor:4,sombra:true,fondo:'ninguno',anim:'karaoke',resaltado:'#F5A524',mayus:true}},
-  {id:'titular',nombre:'Titular',est:{fuente:'Anton',peso:400,color:'#FFFFFF',grosor:0,sombra:true,fondo:'ninguno',anim:'subir',mayus:true}},
-  {id:'marcador',nombre:'Marcador',est:{fuente:'Permanent Marker',peso:400,color:'#FFFFFF',contorno:'#E0245E',grosor:5,sombra:false,fondo:'ninguno',anim:'escribir',mayus:false}}
+  {id:'neon',nombre:'Neón dorado',est:{fuente:'Yellowtail',peso:400,tam:96,efecto:'neon-dorado',brillo:75,grosor:0,sombra:false,fondo:'ninguno',anim:'pop',mayus:false,cursiva:false,subrayado:false}},
+  {id:'clasico',nombre:'Clásico',est:{...RESET_FX,fuente:'Montserrat',peso:800,color:'#FFFFFF',grosor:0,sombra:true,fondo:'ninguno',anim:'pop',mayus:false}},
+  {id:'contorno',nombre:'Contorno',est:{...RESET_FX,fuente:'Montserrat',peso:900,color:'#FFFFFF',contorno:'#000000',grosor:6,sombra:false,fondo:'ninguno',anim:'pop',mayus:true}},
+  {id:'amarillo',nombre:'Amarillo',est:{...RESET_FX,fuente:'Poppins',peso:900,color:'#FFE14D',contorno:'#000000',grosor:5,sombra:true,fondo:'ninguno',anim:'pop',mayus:true}},
+  {id:'caja',nombre:'Caja',est:{...RESET_FX,fuente:'Inter',peso:700,color:'#FFFFFF',grosor:0,sombra:false,fondo:'caja',colorFondo:'#000000',opFondo:75,anim:'fundido',mayus:false}},
+  {id:'karaoke',nombre:'Karaoke',est:{...RESET_FX,fuente:'Montserrat',peso:900,color:'#FFFFFF',contorno:'#000000',grosor:4,sombra:true,fondo:'ninguno',anim:'karaoke',resaltado:'#F5A524',mayus:true}},
+  {id:'titular',nombre:'Titular',est:{...RESET_FX,fuente:'Anton',peso:400,color:'#FFFFFF',grosor:0,sombra:true,fondo:'ninguno',anim:'subir',mayus:true}},
+  {id:'marcador',nombre:'Marcador',est:{...RESET_FX,fuente:'Permanent Marker',peso:400,color:'#FFFFFF',contorno:'#E0245E',grosor:5,sombra:false,fondo:'ninguno',anim:'escribir',mayus:false}}
 ];
 const COLORES=['#FFFFFF','#FFE14D','#F5A524','#FF5A5F','#FF7EB6','#6EE7F9','#7CF29A','#9B8CFF','#111111'];
 const FILTRO0={preset:'natural',brillo:100,contraste:100,saturacion:100,calidez:0,sepia:0,tono:0,vineta:0,grano:0};
@@ -461,7 +473,7 @@ function animState(e,T,it,H){const el=T-it.a,rl=it.b-T,D=Math.max(0.1,it.b-it.a)
 function drawTexto(c,W,H,T,it,hits){
   const e=it.est,k=W/1080;let txt=String(it.t||'');if(!txt.trim())return;if(e.mayus)txt=txt.toUpperCase();
   const A=animState(e,T,it,H);if(A.al<=0)return;
-  const size=e.tam*k;c.font=`${e.peso} ${size}px "${e.fuente}", system-ui, sans-serif`;c.textBaseline='middle';c.textAlign='left';
+  const size=e.tam*k;c.font=`${e.cursiva?'italic ':''}${e.peso} ${size}px "${e.fuente}", system-ui, sans-serif`;c.textBaseline='middle';c.textAlign='left';
   const lines=wrapLines(c,txt,e.ancho/100*W),lh=size*1.18,totH=lines.length*lh;
   const widths=lines.map(l=>c.measureText(l).width),maxw=Math.max(...widths,1);
   const cx=it.x*W,cy=it.y*H+A.dy,rot=it.rot||0;
@@ -473,11 +485,15 @@ function drawTexto(c,W,H,T,it,hits){
     const x0=e.alin==='left'?-maxw/2:e.alin==='right'?maxw/2-lw:-lw/2;
     if(e.fondo==='caja'&&ln){const px=size*0.32,py=size*0.1;c.fillStyle=hexA(e.colorFondo,e.opFondo/100);c.beginPath();const rx=x0-px,ry=y-lh/2-py*0.2,rw=lw+px*2,rh=lh+py*0.4,rr=size*0.18;if(c.roundRect)c.roundRect(rx,ry,rw,rh,rr);else c.rect(rx,ry,rw,rh);c.fill()}
     let x=x0;
-    for(const w of ln.split(' ')){if(!w)continue;if(left<=0)break;const wt=left<w.length?w.slice(0,left):w;left-=w.length+1;
-      const col=(hiW>=0&&wi===hiW)?e.resaltado:e.color;
-      if(e.grosor>0){c.lineJoin='round';c.lineWidth=e.grosor*k*2;c.strokeStyle=e.contorno;if(e.sombra){c.shadowColor='rgba(0,0,0,.5)';c.shadowBlur=size*0.12;c.shadowOffsetY=size*0.04}c.strokeText(wt,x,y);c.shadowColor='transparent'}
-      else if(e.sombra){c.shadowColor='rgba(0,0,0,.55)';c.shadowBlur=size*0.14;c.shadowOffsetY=size*0.04}
-      c.fillStyle=col;c.fillText(wt,x,y);c.shadowColor='transparent';c.shadowBlur=0;c.shadowOffsetY=0;
+    const words=ln.split(' ').filter(Boolean);
+    for(let wj=0;wj<words.length;wj++){const w=words[wj];if(left<=0)break;const wt=left<w.length?w.slice(0,left):w;left-=w.length+1;
+      const hi=hiW>=0&&wi===hiW,fx=hi?null:EFX[e.efecto],ww=c.measureText(wt).width;
+      const fill=fx?gradEfx(c,fx,x,y,ww,size):(hi?e.resaltado:e.color);
+      if(e.grosor>0){c.lineJoin='round';c.lineWidth=e.grosor*k*2;c.strokeStyle=e.contorno;if(e.sombra){c.shadowColor='rgba(0,0,0,.5)';c.shadowBlur=size*0.12;c.shadowOffsetY=size*0.04}c.strokeText(wt,x,y);c.shadowColor='transparent';c.shadowBlur=0;c.shadowOffsetY=0}
+      if(fx&&fx.glow){const B=(e.brillo??70)/100;c.save();c.fillStyle=fill;c.shadowColor=fx.glow;c.shadowBlur=size*0.7*B;c.fillText(wt,x,y);c.shadowBlur=size*0.28*B;c.fillText(wt,x,y);c.restore()}
+      else if(e.sombra&&!(e.grosor>0)){c.shadowColor='rgba(0,0,0,.55)';c.shadowBlur=size*0.14;c.shadowOffsetY=size*0.04}
+      c.fillStyle=fill;c.fillText(wt,x,y);c.shadowColor='transparent';c.shadowBlur=0;c.shadowOffsetY=0;
+      if(e.subrayado){const sp=wj<words.length-1&&left>0?c.measureText(' ').width:0;c.fillStyle=fx?gradEfx(c,fx,x,y,ww+sp,size):fill;c.fillRect(x,y+size*0.44,ww+sp,Math.max(2,size*0.065))}
       x+=c.measureText(w+' ').width;wi++}
   });
   c.restore();
@@ -630,7 +646,7 @@ function setEstado(t,cls=''){const e=$('#estado');e.textContent=t;e.className='e
 function scheduleSave(){if(!S.db||!S.pid||!S.vn||!S.E)return;setEstado('Cambios sin guardar','warn');clearTimeout(saveTimer);const pid=S.pid,vn=S.vn;
   saveTimer=setTimeout(()=>{const body={estado:JSON.parse(JSON.stringify(S.E)),actualizado:new Date().toISOString()};
     saving=saving.then(()=>S.db.doc(`proyectos/${pid}/ediciones/v${vn}`).set(body)).then(()=>{if(S.pid===pid&&S.vn===vn)setEstado('Guardado','ok')}).catch(e=>{setEstado(e?.code==='quota_exceeded'?'Sin espacio para guardar':e?.code==='invalid_argument'?'Solo lectura':'No se pudo guardar','warn')})},1000)}
-function ensureFonts(){if(!S.E||!document.fonts)return;const set=new Set();[...S.E.subs,...S.E.elems].forEach(it=>{if(it.est?.fuente)set.add(`${it.est.peso} 40px "${it.est.fuente}"`)});set.forEach(f=>{if(!document.fonts.check(f))document.fonts.load(f).then(()=>{S.needDraw=true}).catch(()=>{})})}
+function ensureFonts(){if(!S.E||!document.fonts)return;const set=new Set();[...S.E.subs,...S.E.elems].forEach(it=>{if(it.est?.fuente)set.add(`${it.est.cursiva?'italic ':''}${it.est.peso} 40px "${it.est.fuente}"`)});set.forEach(f=>{if(!document.fonts.check(f))document.fonts.load(f).then(()=>{S.needDraw=true}).catch(()=>{})})}
 if(document.fonts)document.fonts.ready.then(()=>{S.needDraw=true});
 
 /* ============ base de datos: proyectos y versiones ============ */
@@ -814,8 +830,16 @@ const PROTOCOLO=`ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + Art
                      "x": 0.5, "y": 0.74, "estilo": {"color": "#FFFFFF"}}],
      "textos": [{"texto": "Título", "inicio": 0, "fin": 3, "x": 0.5, "y": 0.3}]
    }
-   Mandá los subtítulos como datos (no quemados en el MP4) cuando se pueda,
-   así se editan acá. x/y van de 0 a 1 (centro del texto).
+   OBLIGATORIO: subí el MP4 SIN subtítulos quemados (renderizá una versión
+   limpia) y mandá TODOS los subtítulos en "subtitulos", con sus tiempos.
+   Así aparecen en la línea de tiempo y se pueden editar y mover.
+   x/y van de 0 a 1 (centro del texto). "estilo" acepta: fuente, peso,
+   tam (px sobre 1080 de ancho), color, mayus, contorno, grosor, sombra,
+   fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
+   "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
+   "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
+   "arcoiris"), brillo (0-100), cursiva, subrayado, ancho, alin.
+   Los textos fijos (títulos, etiquetas) van en "textos" con el mismo formato.
 5. Actualizá el proyecto: ArtifactData "set" (nuevo) o "update" (existente)
    en proyectos/<id>
    {"titulo": "...", "ultimaVersion": <n>, "ultimoVideo": "<assetId>",
@@ -832,8 +856,12 @@ function estiloHTML(key,it){const e=it.est;
   return`<div class="sec" id="sec-estilo"><h4>Estilo</h4>
   <div class="f"><label>Fuente</label><select data-bind="${key}|est.fuente">${FUENTES.map(f=>`<option ${f===e.fuente?'selected':''} style="font-family:'${f}'">${f}</option>`).join('')}</select><span></span></div>
   <div class="f"><label>Grosor</label><select data-bind="${key}|est.peso" data-type="num">${opt([[400,'Normal'],[600,'Semi'],[700,'Negrita'],[800,'Extra'],[900,'Black']],e.peso)}</select><span></span></div>
+  <div class="f"><label>Formato</label><div class="fmt"><button class="${e.peso>=700?'on':''}" data-act="fmt" data-v="negrita" data-k="${key}" aria-pressed="${e.peso>=700}" title="Negrita"><b>B</b></button><button class="${e.cursiva?'on':''}" data-act="fmt" data-v="cursiva" data-k="${key}" aria-pressed="${!!e.cursiva}" title="Cursiva"><i>I</i></button><button class="${e.subrayado?'on':''}" data-act="fmt" data-v="subrayado" data-k="${key}" aria-pressed="${!!e.subrayado}" title="Subrayado"><u>U</u></button></div><span></span></div>
   ${rng_('Tamaño',key+'|est.tam',e.tam,20,220)}
   <div class="f"><label>Color</label><div class="sw">${COLORES.map(c=>`<button style="background:${c}" data-act="color" data-v="${c}" data-k="${key}" aria-label="Color ${c}"></button>`).join('')}</div><input type="color" data-bind="${key}|est.color" value="${e.color}" aria-label="Color del texto"></div>
+  <div class="sec" id="sec-efecto" style="gap:6px"><div class="f" style="grid-template-columns:92px 1fr"><label>Efecto</label><span class="hint">${e.efecto&&e.efecto!=='ninguno'?'El efecto reemplaza el color del texto':'Degradado y brillo, listos para usar'}</span></div>
+  <div class="efxgrid"><button class="efx ${!e.efecto||e.efecto==='ninguno'?'on':''}" data-act="efecto" data-v="ninguno" data-k="${key}"><span style="color:${e.color}">Aa</span><small>Ninguno</small></button>${Object.entries(EFX).map(([id,f])=>`<button class="efx ${e.efecto===id?'on':''}" data-act="efecto" data-v="${id}" data-k="${key}"><span style="background:linear-gradient(${f.dir==='h'?'90deg':'180deg'},${f.g.join(',')});-webkit-background-clip:text;background-clip:text;color:transparent;${f.glow?`filter:drop-shadow(0 0 5px ${f.glow})`:''}">Aa</span><small>${f.n}</small></button>`).join('')}</div>
+  ${EFX[e.efecto]?.glow?rng_('Brillo',key+'|est.brillo',e.brillo??70,0,100,1,'%'):''}</div>
   <div class="f"><label>Mayúsculas</label><input type="checkbox" data-bind="${key}|est.mayus" data-type="bool" ${e.mayus?'checked':''}><span></span></div>
   <div class="f"><label>Contorno</label><input type="range" data-bind="${key}|est.grosor" data-type="num" min="0" max="14" value="${e.grosor}" aria-label="Grosor del contorno"><input type="color" data-bind="${key}|est.contorno" value="${e.contorno}" aria-label="Color del contorno"></div>
   <div class="f"><label>Sombra</label><input type="checkbox" data-bind="${key}|est.sombra" data-type="bool" ${e.sombra?'checked':''}><span></span></div>
@@ -950,7 +978,9 @@ const ACT={
   delSub:el=>commit(()=>{S.E.subs=S.E.subs.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
   delElem:el=>commit(()=>{S.E.elems=S.E.elems.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
   delSfx:el=>commit(()=>{S.E.audio.sfx=S.E.audio.sfx.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
-  color:el=>{const t=target(el.dataset.k);if(t)commit(()=>t.est.color=el.dataset.v)},
+  color:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.color=el.dataset.v;t.est.efecto='ninguno'})},
+  fmt:el=>{const t=target(el.dataset.k);if(!t)return;const v=el.dataset.v;commit(()=>{if(v==='negrita')t.est.peso=t.est.peso>=700?400:800;else t.est[v]=!t.est[v]})},
+  efecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.efecto=el.dataset.v;if(t.est.brillo==null)t.est.brillo=70})},
   pos:el=>{const t=target(el.dataset.k);if(t)commit(()=>(el.dataset.k==='sub'?grupo(t):[t]).forEach(o=>{o.y=+el.dataset.v;o.x=0.5}))},
   estiloTodos:()=>{const it=selItem();if(!it)return;commit(()=>S.E.subs.forEach(s=>{s.est={...it.est};s.x=it.x;s.y=it.y;s.rot=it.rot||0}));toast('Estilo aplicado a todos los subtítulos.')},
   preset:el=>{const k=el.dataset.v;commit(()=>{S.E.filtro={...FILTRO0,...PRESETS[k][1],preset:k}})},

@@ -23,8 +23,16 @@ ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + ArtifactData)
                      "x": 0.5, "y": 0.74, "estilo": {"color": "#FFFFFF"}}],
      "textos": [{"texto": "Título", "inicio": 0, "fin": 3, "x": 0.5, "y": 0.3}]
    }
-   Mandá los subtítulos como datos (no quemados en el MP4) cuando se pueda,
-   así se editan acá. x/y van de 0 a 1 (centro del texto).
+   OBLIGATORIO: subí el MP4 SIN subtítulos quemados (renderizá una versión
+   limpia) y mandá TODOS los subtítulos en "subtitulos", con sus tiempos.
+   Así aparecen en la línea de tiempo y se pueden editar y mover.
+   x/y van de 0 a 1 (centro del texto). "estilo" acepta: fuente, peso,
+   tam (px sobre 1080 de ancho), color, mayus, contorno, grosor, sombra,
+   fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
+   "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
+   "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
+   "arcoiris"), brillo (0-100), cursiva, subrayado, ancho, alin.
+   Los textos fijos (títulos, etiquetas) van en "textos" con el mismo formato.
 5. Actualizá el proyecto: ArtifactData "set" (nuevo) o "update" (existente)
    en proyectos/<id>
    {"titulo": "...", "ultimaVersion": <n>, "ultimoVideo": "<assetId>",
