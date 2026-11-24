@@ -1,0 +1,71 @@
+{% macro kpi(etiqueta, valor, variacion=None, bueno_si_sube=True, explicacion='') -%}
+<div class="kpi">
+  <div class="etq">{{ etiqueta }}</div>
+  <div class="val">{{ valor }}</div>
+  {% if variacion is not none %}<div class="var {{ clase_var(variacion, bueno_si_sube) }}">{{ variacion|var }} vs anterior</div>{% endif %}
+  {% if explicacion %}<div class="exp">{{ explicacion }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro grafico(svg, titulo) -%}
+{% if svg %}<div class="grafico"><div class="tit">{{ titulo }}</div>{{ svg|safe }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro publicaciones(lista, red) -%}
+<div class="posts">
+{% for p in lista %}
+  <div class="post">
+    {% if p.imagen %}<img src="{{ p.imagen }}" alt="">{% else %}<div class="ph">{{ p.tipo|tipo }}</div>{% endif %}
+    <div class="cuerpo">
+      <div class="txt">{{ p.texto or 'Sin texto' }}</div>
+      <div><b>{{ p.interacciones|num }}</b> interacciones{% if p.alcance %} · {{ p.alcance|compacto }} alcance{% endif %}</div>
+      {% if p.dt %}<div class="nota">{{ p.dt.day }}/{{ p.dt.month }} · {{ p.tipo|tipo }}</div>{% endif %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro plan_resumen(plan) -%}
+<table class="plan-tabla">
+  <tr><th>#</th><th>Prioridad</th><th>Cambio</th><th>Dónde</th><th>Impacto esperado</th></tr>
+  {% for a in plan.acciones %}
+  <tr><td class="n">{{ loop.index }}</td><td><span class="chip p-{{ a.prioridad }}">{{ a.prioridad|upper }}</span></td>
+      <td><b>{{ a.tipo }}</b></td>
+      <td>{{ a.anuncio or a.conjunto or a.campana }}<div class="nota">{% if a.anuncio %}{{ a.conjunto }} · {% endif %}{% if a.anuncio or a.conjunto %}{{ a.campana }}{% endif %}</div></td>
+      <td class="nota">{{ a.impacto or "" }}</td></tr>
+  {% endfor %}
+</table>
+{%- endmacro %}
+
+{% macro accion_ficha(a, n, abrir_como=True, clave=None) -%}
+<div class="accion p-{{ a.prioridad }}" data-prioridad="{{ a.prioridad }}"{% if clave %} data-clave="{{ clave }}"{% endif %}>
+  <div class="enc">
+    <span class="num">{{ n }}</span>
+    <span class="chip p-{{ a.prioridad }}">{{ a.prioridad|upper }}</span>
+    <span class="tipo">{{ a.tipo }}</span>
+    {% if a.formato %}<span class="chip">{{ a.formato }}</span>{% endif %}
+    {% if clave %}<label class="hecho"><input type="checkbox" data-clave="{{ clave }}"> Hecho</label>{% endif %}
+  </div>
+  <div class="cuerpo-accion">
+    {% if a.miniatura %}<img class="mini" src="{{ a.miniatura }}" alt="">{% endif %}
+    <div>
+      <div class="donde">
+        <div><span class="etq-n">Campaña</span> {{ a.campana }}</div>
+        {% if a.conjunto %}<div><span class="etq-n">Conjunto</span> {{ a.conjunto }}</div>{% endif %}
+        {% if a.anuncio %}<div><span class="etq-n">Anuncio</span> <b>{{ a.anuncio }}</b></div>{% endif %}
+      </div>
+      <p class="que"><b>Qué hacer:</b> {{ a.que }}</p>
+      <div class="bloque"><b>Por qué:</b>
+        {% if a.porque|length == 1 %} {{ a.porque[0] }}{% else %}<ul>{% for x in a.porque %}<li>{{ x.lstrip("• ") }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      {% if abrir_como %}
+      <div class="bloque"><b>Cómo hacerlo:</b><ol>{% for x in a.como %}<li>{{ x }}</li>{% endfor %}</ol></div>
+      {% else %}
+      <details class="bloque"><summary><b>Cómo hacerlo</b></summary><ol>{% for x in a.como %}<li>{{ x }}</li>{% endfor %}</ol></details>
+      {% endif %}
+      {% if a.impacto %}<div class="impacto"><b>Impacto esperado:</b> {{ a.impacto }}</div>{% endif %}
+    </div>
+  </div>
+</div>
+{%- endmacro %}

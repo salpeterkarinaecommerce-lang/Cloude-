@@ -1,0 +1,16 @@
+# Cliente de EJEMPLO (solo se usa con --demo). Copiá este archivo a clientes/ para un cliente real.
+nombre: Tienda Luna
+activo: true
+rubro: Indumentaria femenina (e-commerce)
+objetivo: ventas
+moneda: ARS
+ad_account_id: act_1234567890
+page_id: "111111111111111"
+instagram_id: "17841400000000000"
+presupuesto_mensual: 1500000
+cpa_objetivo: 9000
+roas_objetivo: 4
+ticket_promedio: 32000
+frecuencias: [semanal, mensual]
+color: "#DB2777"
+notas: Temporada alta en diciembre. Envío gratis desde $60.000.

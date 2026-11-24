@@ -1,0 +1,5 @@
+# Reportes generados (contienen datos de clientes: nunca subirlos)
+salida/
+__pycache__/
+*.pyc
+.env

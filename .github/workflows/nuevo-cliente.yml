@@ -1,0 +1,42 @@
+name: Alta de cliente (formulario)
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  alta:
+    # Solo vos (dueña del repo) podés dar de alta clientes
+    if: startsWith(github.event.issue.title, '[Nuevo cliente]') && github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Crear archivo del cliente
+        id: alta
+        env:
+          CUERPO: ${{ github.event.issue.body }}
+        run: |
+          printf '%s' "$CUERPO" > "$RUNNER_TEMP/cuerpo.md"
+          SLUG=$(python -m reportes_meta desde-issue "$RUNNER_TEMP/cuerpo.md" | tail -1)
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+      - name: Guardar en el repositorio
+        run: |
+          git config user.name "reportes-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clientes/
+          git commit -m "Alta de cliente: ${{ steps.alta.outputs.slug }}" || echo "Sin cambios"
+          git pull --rebase && git push
+      - name: Avisar y cerrar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --repo "$GITHUB_REPOSITORY" --body "✅ Cliente agregado como \`clientes/${{ steps.alta.outputs.slug }}.yaml\`. Va a entrar en el próximo reporte automático. Para probarlo ya: Actions → Reportes Meta → Run workflow."
+          gh issue close ${{ github.event.issue.number }} --repo "$GITHUB_REPOSITORY"
