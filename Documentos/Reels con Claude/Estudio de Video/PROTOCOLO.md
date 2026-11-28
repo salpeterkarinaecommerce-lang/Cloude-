@@ -30,7 +30,7 @@ ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + ArtifactData)
    tam (px sobre 1080 de ancho), color, mayus, contorno, grosor, sombra,
    fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
    "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
-   "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
+   "neon-rosa"|"neon-rojo"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
    "arcoiris"|"personal"), colorEfecto (hex, con "personal"), tornasol
    (0-100, reflejo tornasolado con "personal"), brillo (0-100), cursiva,
    subrayado, ancho, alin.

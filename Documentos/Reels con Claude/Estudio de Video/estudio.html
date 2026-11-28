@@ -357,7 +357,7 @@ const S={db:null,assets:null,downloads:null,user:null,
 const LAB=86; // ancho de etiquetas del timeline
 
 const FUENTES=['Montserrat','Poppins','Anton','Bebas Neue','Archivo Black','Oswald','Inter','Playfair Display','Yellowtail','Kaushan Script','Pacifico','Dancing Script','Permanent Marker','Bangers'];
-const EFX={'neon-dorado':{n:'Neón dorado',g:['#FFFDE0','#FFE97A','#FFC81E','#F2A100'],glow:'#FFB800'},'neon-rosa':{n:'Neón rosa',g:['#FFF0F8','#FF9AD5','#FF3FA4'],glow:'#FF2D95'},'neon-celeste':{n:'Neón celeste',g:['#F0FEFF','#8CEEFF','#22C6FF'],glow:'#1EB8FF'},'neon-verde':{n:'Neón verde',g:['#F2FFF0','#9DFF8A','#2EE65C'],glow:'#2BFF6A'},'fuego':{n:'Fuego',g:['#FFF07A','#FFA41F','#FF4A1F'],glow:'#FF6A00'},'oro':{n:'Oro',g:['#FFF6C9','#E9C25A','#B8862B','#F3D77E']},'plata':{n:'Plata',g:['#FFFFFF','#C9CDD6','#7D828F','#E5E7EC']},'arcoiris':{n:'Arcoíris',g:['#FF4D4D','#FFB84D','#FFF04D','#5CFF7A','#4DC3FF','#B26BFF'],dir:'h'}};
+const EFX={'neon-dorado':{n:'Neón dorado',g:['#FFFDE0','#FFE97A','#FFC81E','#F2A100'],glow:'#FFB800'},'neon-rosa':{n:'Neón rosa',g:['#FFF0F8','#FF9AD5','#FF3FA4'],glow:'#FF2D95'},'neon-rojo':{n:'Neón rojo',g:['#FFE8E8','#FF8A8A','#FF2A2A','#D10A1E'],glow:'#FF1A1A'},'neon-celeste':{n:'Neón celeste',g:['#F0FEFF','#8CEEFF','#22C6FF'],glow:'#1EB8FF'},'neon-verde':{n:'Neón verde',g:['#F2FFF0','#9DFF8A','#2EE65C'],glow:'#2BFF6A'},'fuego':{n:'Fuego',g:['#FFF07A','#FFA41F','#FF4A1F'],glow:'#FF6A00'},'oro':{n:'Oro',g:['#FFF6C9','#E9C25A','#B8862B','#F3D77E']},'plata':{n:'Plata',g:['#FFFFFF','#C9CDD6','#7D828F','#E5E7EC']},'arcoiris':{n:'Arcoíris',g:['#FF4D4D','#FFB84D','#FFF04D','#5CFF7A','#4DC3FF','#B26BFF'],dir:'h'}};
 function hex2hsl(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);let r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,Sx=0;const L=(mx+mn)/2;if(mx!==mn){const d=mx-mn;Sx=L>0.5?d/(2-mx-mn):d/(mx+mn);H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60}return[H,Sx*100,L*100]}
 const hsl=(h,s_,l,a=1)=>`hsla(${((h%360)+360)%360},${clamp(s_,0,100)}%,${clamp(l,0,100)}%,${a})`;
 const efxMemo=new Map();
@@ -901,7 +901,7 @@ const PROTOCOLO=`ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + Art
    tam (px sobre 1080 de ancho), color, mayus, contorno, grosor, sombra,
    fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
    "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
-   "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
+   "neon-rosa"|"neon-rojo"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
    "arcoiris"|"personal"), colorEfecto (hex, con "personal"), tornasol
    (0-100, reflejo tornasolado con "personal"), brillo (0-100), cursiva,
    subrayado, ancho, alin.
