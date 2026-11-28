@@ -941,7 +941,8 @@ function estiloHTML(key,it){const e=it.est;
   </div>`}
 function posHTML(key,it){return`<div class="sec" id="sec-pos"><h4>Ubicación</h4>${pct_('Horizontal',key+'|x',it.x)}${pct_('Vertical',key+'|y',it.y)}${rng_('Rotación',key+'|rot',it.rot||0,-180,180,1,'°')}
   <div class="row-btns"><button class="btn sm" data-act="pos" data-v="0.18" data-k="${key}">Arriba</button><button class="btn sm" data-act="pos" data-v="0.5" data-k="${key}">Centro</button><button class="btn sm" data-act="pos" data-v="0.74" data-k="${key}">Abajo</button></div>
-  ${key==='sub'?`<div class="f"><label>Mover juntos</label><input type="checkbox" data-bind="edicion|subsJuntos" data-type="bool" ${S.E.subsJuntos!==false?'checked':''} aria-label="Mover todos los subtítulos juntos"><span class="hint">Todos los subtítulos a la vez</span></div>`:''}
+  ${key==='sub'?`<div class="f"><label>Mover juntos</label><input type="checkbox" data-bind="edicion|subsJuntos" data-type="bool" ${S.E.subsJuntos!==false?'checked':''} aria-label="Mover todos los subtítulos juntos"><span class="hint">Solo la posición; el tamaño y el giro cambian de a uno</span></div>
+  <div class="row-btns"><button class="btn sm" data-act="tamTodos">Usar este tamaño y giro en todos</button></div>`:''}
   <p class="hint">Sobre el video: arrastrá con el dedo para moverlo, pellizcá con dos dedos para agrandarlo o girarlo, o usá la manija de la esquina. Tocá dos veces para editar el texto.</p></div>`}
 function renderInspector(){const b=$('#inspBody');
   if(!S.E){b.innerHTML='<p class="hint">Abrí un video de la biblioteca para editarlo.</p>';return}
@@ -1013,7 +1014,7 @@ function onBind(el,final){const [key,path]=el.dataset.bind.split('|');const t=ta
   commit(()=>{
     if(ty==='time'){const tot=dur();if(key==='clip'){v=path==='ini'?clamp(v,0,t.fin-0.1):clamp(v,t.ini+0.1,S.srcDur||v)}else if(path==='a')v=clamp(v,0,(t.b??tot)-0.05);else if(path==='b')v=clamp(v,t.a+0.05,tot);else v=Math.max(0,v);el.value=fmt(v)}
     setPath(t,path,v);
-    if(key==='sub'&&S.E.subsJuntos!==false&&['x','y','rot','est.tam'].includes(path))S.E.subs.forEach(o=>{if(o!==t)setPath(o,path,v)});
+    if(key==='sub'&&S.E.subsJuntos!==false&&['x','y'].includes(path))S.E.subs.forEach(o=>{if(o!==t)setPath(o,path,v)});
     if(key==='filtro'&&path!=='preset')t.preset='';
   },{coalesce:!final,insp:!!el.dataset.rerender});
   if(key==='mus'||key.startsWith('sfx')||key==='audio'){if(S.playing){pause();play()}}
@@ -1046,6 +1047,7 @@ const ACT={
   delElem:el=>commit(()=>{S.E.elems=S.E.elems.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
   delSfx:el=>commit(()=>{S.E.audio.sfx=S.E.audio.sfx.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
   color:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.color=el.dataset.v;t.est.efecto='ninguno'})},
+  tamTodos:()=>{const it=selItem();if(!it||S.sel.k!=='sub')return;commit(()=>S.E.subs.forEach(s=>{s.est.tam=it.est.tam;s.rot=it.rot||0}));toast('Tamaño y giro copiados a todos los subtítulos.')},
   fmt:el=>{const t=target(el.dataset.k);if(!t)return;const v=el.dataset.v;commit(()=>{if(v==='negrita')t.est.peso=t.est.peso>=700?400:800;else t.est[v]=!t.est[v]})},
   efecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.efecto=el.dataset.v;if(t.est.brillo==null)t.est.brillo=70;if(el.dataset.v==='personal'){if(!t.est.colorEfecto)t.est.colorEfecto='#FF4FD8';if(t.est.tornasol==null)t.est.tornasol=60}})},
   colorEfecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.colorEfecto=el.dataset.v;t.est.efecto='personal'})},
@@ -1193,7 +1195,9 @@ function aplicarGesto(g,esc,drot,dx,dy){
   const W=cv.width,H=cv.height,pr=g.orig.find(o=>o.o===g.it)||g.orig[0];S.guias={v:false,h:false};
   let nx=pr.x+dx/W,ny=pr.y+dy/H;if(Math.abs(nx-0.5)<8*g.k/W){nx=0.5;S.guias.v=true}if(Math.abs(ny-0.5)<8*g.k/H){ny=0.5;S.guias.h=true}
   let r=pr.rot+drot;const r90=Math.round(r/90)*90;if(drot&&Math.abs(r-r90)<4)r=r90;const dr=r-pr.rot;
-  for(const o of g.orig){o.o.x=clamp(o.x+(nx-pr.x),0,1);o.o.y=clamp(o.y+(ny-pr.y),0,1);o.o.rot=Math.round((((o.rot+dr)%360)+540)%360-180);
+  for(const o of g.orig){o.o.x=clamp(o.x+(nx-pr.x),0,1);o.o.y=clamp(o.y+(ny-pr.y),0,1);
+    if(o.o!==g.it)continue; /* tamaño y giro: solo el elemento tocado */
+    o.o.rot=Math.round((((o.rot+dr)%360)+540)%360-180);
     if(o.o.tipo==='imagen')o.o.esc=clamp(o.esc*esc,0.03,2);else if(o.o.est)o.o.est.tam=clamp(Math.round(o.tam*esc),12,400)}
   g.movido=true;S.needDraw=true;
 }
