@@ -430,7 +430,7 @@ function normalizar(E,v){
   if(!Array.isArray(E.clips)||!E.clips.length) E.clips=b.clips;
   E.subs=(E.subs||[]).map(s=>({...s,kind:'sub',est:{...EST_SUB,...s.est}}));
   E.elems=(E.elems||[]).map(s=>({...s,kind:'elem',est:s.tipo==='imagen'?s.est:{...EST_TXT,...s.est}}));
-  E.audio.sfx=E.audio.sfx||[];if(E.subsJuntos===undefined)E.subsJuntos=true;
+  E.audio.sfx=E.audio.sfx||[];if(!E.juntosV2){E.subsJuntos=false;E.juntosV2=true} /* por defecto cada subtítulo se mueve solo */
   return E;
 }
 function layout(){let acc=0;return S.E.clips.map(c=>{const o={c,start:acc,len:Math.max(0,c.fin-c.ini)};acc+=o.len;return o})}
@@ -941,7 +941,7 @@ function estiloHTML(key,it){const e=it.est;
   </div>`}
 function posHTML(key,it){return`<div class="sec" id="sec-pos"><h4>Ubicación</h4>${pct_('Horizontal',key+'|x',it.x)}${pct_('Vertical',key+'|y',it.y)}${rng_('Rotación',key+'|rot',it.rot||0,-180,180,1,'°')}
   <div class="row-btns"><button class="btn sm" data-act="pos" data-v="0.18" data-k="${key}">Arriba</button><button class="btn sm" data-act="pos" data-v="0.5" data-k="${key}">Centro</button><button class="btn sm" data-act="pos" data-v="0.74" data-k="${key}">Abajo</button></div>
-  ${key==='sub'?`<div class="f"><label>Mover juntos</label><input type="checkbox" data-bind="edicion|subsJuntos" data-type="bool" ${S.E.subsJuntos!==false?'checked':''} aria-label="Mover todos los subtítulos juntos"><span class="hint">Solo la posición; el tamaño y el giro cambian de a uno</span></div>
+  ${key==='sub'?`<div class="f"><label>Mover juntos</label><input type="checkbox" data-bind="edicion|subsJuntos" data-type="bool" ${S.E.subsJuntos===true?'checked':''} aria-label="Mover todos los subtítulos juntos"><span class="hint">Activalo para mover todos los subtítulos a la vez</span></div>
   <div class="row-btns"><button class="btn sm" data-act="tamTodos">Usar este tamaño y giro en todos</button></div>`:''}
   <p class="hint">Sobre el video: arrastrá con el dedo para moverlo, pellizcá con dos dedos para agrandarlo o girarlo, o usá la manija de la esquina. Tocá dos veces para editar el texto.</p></div>`}
 function renderInspector(){const b=$('#inspBody');
@@ -1014,7 +1014,7 @@ function onBind(el,final){const [key,path]=el.dataset.bind.split('|');const t=ta
   commit(()=>{
     if(ty==='time'){const tot=dur();if(key==='clip'){v=path==='ini'?clamp(v,0,t.fin-0.1):clamp(v,t.ini+0.1,S.srcDur||v)}else if(path==='a')v=clamp(v,0,(t.b??tot)-0.05);else if(path==='b')v=clamp(v,t.a+0.05,tot);else v=Math.max(0,v);el.value=fmt(v)}
     setPath(t,path,v);
-    if(key==='sub'&&S.E.subsJuntos!==false&&['x','y'].includes(path))S.E.subs.forEach(o=>{if(o!==t)setPath(o,path,v)});
+    if(key==='sub'&&S.E.subsJuntos===true&&['x','y'].includes(path))S.E.subs.forEach(o=>{if(o!==t)setPath(o,path,v)});
     if(key==='filtro'&&path!=='preset')t.preset='';
   },{coalesce:!final,insp:!!el.dataset.rerender});
   if(key==='mus'||key.startsWith('sfx')||key==='audio'){if(S.playing){pause();play()}}
@@ -1189,7 +1189,7 @@ function enCaja(h,p,pad){const a=-(h.rot||0)*Math.PI/180,dx=p.x-h.cx,dy=p.y-h.cy
 function tocado(p){const pad=14*p.k;let orden=[...S.hits].reverse();if(S.sel){const h=orden.find(x=>x.id===S.sel.id);if(h)orden=[h,...orden.filter(x=>x!==h)]}return orden.find(h=>enCaja(h,p,pad))||null}
 function manijaTocada(p){if(!S.sel)return null;const h=S.hits.find(x=>x.id===S.sel.id);if(!h)return null;const q=aPantalla(h,manijaLocal(h));return Math.hypot(p.x-q.x,p.y-q.y)<=24*p.k?h:null}
 function itemDe(h){return h.kind==='sub'?S.E.subs.find(x=>x.id===h.id):S.E.elems.find(x=>x.id===h.id)}
-function grupo(it){return it.kind==='sub'&&S.E.subsJuntos!==false?S.E.subs:[it]}
+function grupo(it){return it.kind==='sub'&&S.E.subsJuntos===true?S.E.subs:[it]}
 function foto(it){return grupo(it).map(o=>({o,x:o.x,y:o.y,rot:o.rot||0,tam:o.est?.tam,esc:o.esc}))}
 function aplicarGesto(g,esc,drot,dx,dy){
   const W=cv.width,H=cv.height,pr=g.orig.find(o=>o.o===g.it)||g.orig[0];S.guias={v:false,h:false};
