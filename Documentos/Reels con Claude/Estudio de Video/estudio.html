@@ -358,6 +358,14 @@ const LAB=86; // ancho de etiquetas del timeline
 
 const FUENTES=['Montserrat','Poppins','Anton','Bebas Neue','Archivo Black','Oswald','Inter','Playfair Display','Yellowtail','Kaushan Script','Pacifico','Dancing Script','Permanent Marker','Bangers'];
 const EFX={'neon-dorado':{n:'Neón dorado',g:['#FFFDE0','#FFE97A','#FFC81E','#F2A100'],glow:'#FFB800'},'neon-rosa':{n:'Neón rosa',g:['#FFF0F8','#FF9AD5','#FF3FA4'],glow:'#FF2D95'},'neon-celeste':{n:'Neón celeste',g:['#F0FEFF','#8CEEFF','#22C6FF'],glow:'#1EB8FF'},'neon-verde':{n:'Neón verde',g:['#F2FFF0','#9DFF8A','#2EE65C'],glow:'#2BFF6A'},'fuego':{n:'Fuego',g:['#FFF07A','#FFA41F','#FF4A1F'],glow:'#FF6A00'},'oro':{n:'Oro',g:['#FFF6C9','#E9C25A','#B8862B','#F3D77E']},'plata':{n:'Plata',g:['#FFFFFF','#C9CDD6','#7D828F','#E5E7EC']},'arcoiris':{n:'Arcoíris',g:['#FF4D4D','#FFB84D','#FFF04D','#5CFF7A','#4DC3FF','#B26BFF'],dir:'h'}};
+function hex2hsl(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);let r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,Sx=0;const L=(mx+mn)/2;if(mx!==mn){const d=mx-mn;Sx=L>0.5?d/(2-mx-mn):d/(mx+mn);H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60}return[H,Sx*100,L*100]}
+const hsl=(h,s_,l,a=1)=>`hsla(${((h%360)+360)%360},${clamp(s_,0,100)}%,${clamp(l,0,100)}%,${a})`;
+const efxMemo=new Map();
+/* Efecto "A elección": degradado y brillo del color elegido; el tornasolado corre el tono en los bordes del degradado */
+function efxDe(e){if(e.efecto!=='personal')return EFX[e.efecto]||null;const col=e.colorEfecto||'#FF4FD8',t=(e.tornasol??60)/100,key=col+'|'+t;let f=efxMemo.get(key);if(f)return f;
+  const[h,sa,l]=hex2hsl(col),S_=Math.max(sa,70);
+  f={n:'A elección',g:[hsl(h+50*t,S_,87),hsl(h+25*t,S_,Math.min(74,l+20)),hsl(h,S_,Math.max(50,l)),hsl(h-35*t,S_,Math.max(36,l-12)),hsl(h-60*t,S_,Math.min(72,l+14))],glow:hsl(h,100,Math.max(50,Math.min(62,l))),h};
+  efxMemo.set(key,f);return f}
 function gradEfx(c,fx,x,y,w,size){const g=fx.dir==='h'?c.createLinearGradient(x,0,x+Math.max(1,w),0):c.createLinearGradient(0,y-size*0.45,0,y+size*0.45);fx.g.forEach((col,i)=>g.addColorStop(i/(fx.g.length-1),col));return g}
 const EST_SUB={fuente:'Montserrat',peso:800,tam:70,color:'#FFFFFF',mayus:false,contorno:'#000000',grosor:0,sombra:true,fondo:'ninguno',colorFondo:'#000000',opFondo:70,anim:'pop',resaltado:'#F5A524',ancho:86,alin:'center',efecto:'ninguno',brillo:70,cursiva:false,subrayado:false};
 const EST_TXT={...EST_SUB,fuente:'Anton',peso:400,tam:96,anim:'subir',mayus:true};
@@ -492,7 +500,7 @@ function pintarTexto(c,Lt,chars,hiW){const{e,k,size,lines,lh,totH,widths,maxw}=L
     if(e.fondo==='caja'&&ln){const px=size*0.32,py=size*0.1;c.fillStyle=hexA(e.colorFondo,e.opFondo/100);c.beginPath();const rx=x0-px,ry=y-lh/2-py*0.2,rw=lw+px*2,rh=lh+py*0.4,rr=size*0.18;if(c.roundRect)c.roundRect(rx,ry,rw,rh,rr);else c.rect(rx,ry,rw,rh);c.fill()}
     let x=x0;const words=ln.split(' ').filter(Boolean);
     for(let wj=0;wj<words.length;wj++){const w=words[wj];if(left<=0)break;const wt=left<w.length?w.slice(0,left):w;left-=w.length+1;
-      const hi=hiW>=0&&wi===hiW,fx=hi?null:EFX[e.efecto],ww=c.measureText(wt).width;
+      const hi=hiW>=0&&wi===hiW,fx=hi?null:efxDe(e),ww=c.measureText(wt).width;
       const fill=fx?gradEfx(c,fx,x,y,ww,size):(hi?e.resaltado:e.color);
       if(e.grosor>0){c.lineJoin='round';c.lineWidth=e.grosor*k*2;c.strokeStyle=e.contorno;if(e.sombra){c.shadowColor='rgba(0,0,0,.5)';c.shadowBlur=size*0.12;c.shadowOffsetY=size*0.04}c.strokeText(wt,x,y);c.shadowColor='transparent';c.shadowBlur=0;c.shadowOffsetY=0}
       if(fx&&fx.glow){const B=(e.brillo??70)/100;c.save();c.fillStyle=fx.glow;c.shadowColor=fx.glow;c.shadowOffsetX=0;c.shadowOffsetY=0;c.shadowBlur=size*0.7*B;c.fillText(wt,x,y);c.shadowBlur=size*0.3*B;c.fillText(wt,x,y);c.restore()}
@@ -503,7 +511,20 @@ function pintarTexto(c,Lt,chars,hiW){const{e,k,size,lines,lh,totH,widths,maxw}=L
   })}
 const txtCache=new Map();
 function hornearTexto(Lt){const pad=Math.ceil(Lt.size*0.9+(Lt.e.grosor||0)*Lt.k*2),cw=Math.ceil(Lt.maxw+Lt.size*0.8+pad*2),ch=Math.ceil(Lt.totH+pad*2);
-  const oc=document.createElement('canvas');oc.width=cw;oc.height=ch;const x=oc.getContext('2d');x.translate(cw/2,ch/2);pintarTexto(x,Lt,Infinity,-1);return{cv:oc,w:Lt.maxw,h:Lt.totH}}
+  const oc=document.createElement('canvas');oc.width=cw;oc.height=ch;const x=oc.getContext('2d');x.translate(cw/2,ch/2);pintarTexto(x,Lt,Infinity,-1);
+  const out={cv:oc,w:Lt.maxw,h:Lt.totH};
+  if(Lt.e.efecto==='personal'&&(Lt.e.tornasol??60)>0){const m=document.createElement('canvas');m.width=cw;m.height=ch;const mx=m.getContext('2d');mx.translate(cw/2,ch/2);
+    pintarTexto(mx,{...Lt,e:{...Lt.e,efecto:'ninguno',color:'#FFFFFF',grosor:0,sombra:false,fondo:'ninguno'}},Infinity,-1);
+    const sh=document.createElement('canvas');sh.width=cw;sh.height=ch;out.mask=m;out.sheen=sh;out.hue=efxDe(Lt.e).h;out.t=(Lt.e.tornasol??60)/100}
+  return out}
+/* reflejo que recorre las letras: una franja tornasolada en diagonal, pintada solo sobre el texto */
+function pintarReflejo(c,bmp,T){const sh=bmp.sheen,x=sh.getContext('2d'),w=sh.width,h=sh.height,band=Math.max(40,w*0.28);
+  x.globalCompositeOperation='source-over';x.clearRect(0,0,w,h);x.drawImage(bmp.mask,0,0);x.globalCompositeOperation='source-atop';
+  const ciclo=2.6,p=((T%ciclo)/ciclo)*(w+band*2+h*0.6)-band-h*0.3;
+  const g=x.createLinearGradient(p,0,p+band+h*0.6,h);const hu=bmp.hue;
+  g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(0.3,hsl(hu+70,100,80,0.55));g.addColorStop(0.5,'rgba(255,255,255,0.95)');g.addColorStop(0.7,hsl(hu-70,100,78,0.55));g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,w,h);
+  c.save();c.globalAlpha*=Math.min(1,0.35+bmp.t*0.75);c.drawImage(sh,-w/2,-h/2);c.restore()}
 function drawTexto(c,W,H,T,it,hits){
   const e=it.est;if(!String(it.t||'').trim())return;const A=animState(e,T,it,H);if(A.al<=0)return;
   const vivo=e.anim==='escribir'||e.anim==='karaoke';let bmp=null,Lt=null;
@@ -511,7 +532,7 @@ function drawTexto(c,W,H,T,it,hits){
   else{Lt=layoutTexto(c,it,W);if(!Lt)return}
   const cx=it.x*W,cy=it.y*H+A.dy,rot=it.rot||0;
   c.save();c.globalAlpha=A.al;c.translate(cx,cy);if(rot)c.rotate(rot*Math.PI/180);c.scale(A.s,A.s);
-  if(bmp)c.drawImage(bmp.cv,-bmp.cv.width/2,-bmp.cv.height/2);
+  if(bmp){c.drawImage(bmp.cv,-bmp.cv.width/2,-bmp.cv.height/2);if(bmp.sheen)pintarReflejo(c,bmp,T)}
   else{const nW=Lt.txt.split(/\s+/).filter(Boolean).length,hiW=A.kar>=0?Math.min(nW-1,Math.floor(A.kar*nW)):-1;pintarTexto(c,Lt,A.chars,hiW)}
   c.restore();
   const w=bmp?bmp.w:Lt.maxw,h=bmp?bmp.h:Lt.totH;
@@ -881,7 +902,9 @@ const PROTOCOLO=`ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + Art
    fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
    "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
    "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
-   "arcoiris"), brillo (0-100), cursiva, subrayado, ancho, alin.
+   "arcoiris"|"personal"), colorEfecto (hex, con "personal"), tornasol
+   (0-100, reflejo tornasolado con "personal"), brillo (0-100), cursiva,
+   subrayado, ancho, alin.
    Los textos fijos (títulos, etiquetas) van en "textos" con el mismo formato.
 5. Actualizá el proyecto: ArtifactData "set" (nuevo) o "update" (existente)
    en proyectos/<id>
@@ -903,8 +926,9 @@ function estiloHTML(key,it){const e=it.est;
   ${rng_('Tamaño',key+'|est.tam',e.tam,20,220)}
   <div class="f"><label>Color</label><div class="sw">${COLORES.map(c=>`<button style="background:${c}" data-act="color" data-v="${c}" data-k="${key}" aria-label="Color ${c}"></button>`).join('')}</div><input type="color" data-bind="${key}|est.color" value="${e.color}" aria-label="Color del texto"></div>
   <div class="sec" id="sec-efecto" style="gap:6px"><div class="f" style="grid-template-columns:92px 1fr"><label>Efecto</label><span class="hint">${e.efecto&&e.efecto!=='ninguno'?'El efecto reemplaza el color del texto':'Degradado y brillo, listos para usar'}</span></div>
-  <div class="efxgrid"><button class="efx ${!e.efecto||e.efecto==='ninguno'?'on':''}" data-act="efecto" data-v="ninguno" data-k="${key}"><span style="color:${e.color}">Aa</span><small>Ninguno</small></button>${Object.entries(EFX).map(([id,f])=>`<button class="efx ${e.efecto===id?'on':''}" data-act="efecto" data-v="${id}" data-k="${key}"><span style="background:linear-gradient(${f.dir==='h'?'90deg':'180deg'},${f.g.join(',')});-webkit-background-clip:text;background-clip:text;color:transparent;${f.glow?`filter:drop-shadow(0 0 5px ${f.glow})`:''}">Aa</span><small>${f.n}</small></button>`).join('')}</div>
-  ${EFX[e.efecto]?.glow?rng_('Brillo',key+'|est.brillo',e.brillo??70,0,100,1,'%'):''}</div>
+  <div class="efxgrid"><button class="efx ${!e.efecto||e.efecto==='ninguno'?'on':''}" data-act="efecto" data-v="ninguno" data-k="${key}"><span style="color:${e.color}">Aa</span><small>Ninguno</small></button>${Object.entries(EFX).map(([id,f])=>`<button class="efx ${e.efecto===id?'on':''}" data-act="efecto" data-v="${id}" data-k="${key}"><span style="background:linear-gradient(${f.dir==='h'?'90deg':'180deg'},${f.g.join(',')});-webkit-background-clip:text;background-clip:text;color:transparent;${f.glow?`filter:drop-shadow(0 0 5px ${f.glow})`:''}">Aa</span><small>${f.n}</small></button>`).join('')}<button class="efx ${e.efecto==='personal'?'on':''}" data-act="efecto" data-v="personal" data-k="${key}"><span style="background:linear-gradient(180deg,#fff 5%,${e.colorEfecto||'#FF4FD8'} 55%,#7af 95%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 5px ${e.colorEfecto||'#FF4FD8'})">Aa</span><small>A elección</small></button></div>
+  ${e.efecto==='personal'?`<div class="f"><label>Color del brillo</label><div class="sw">${['#FF4FD8','#B26BFF','#4D7CFF','#22D3EE','#2EE65C','#FFE14D','#FF8A1F','#FF3B5C','#FFFFFF'].map(c=>`<button style="background:${c}" data-act="colorEfecto" data-v="${c}" data-k="${key}" aria-label="Brillo ${c}"></button>`).join('')}</div><input type="color" data-bind="${key}|est.colorEfecto" value="${e.colorEfecto||'#FF4FD8'}" aria-label="Elegir color del brillo"></div>${rng_('Tornasolado',key+'|est.tornasol',e.tornasol??60,0,100,1,'%')}`:''}
+  ${efxDe(e)?.glow?rng_('Brillo',key+'|est.brillo',e.brillo??70,0,100,1,'%'):''}</div>
   <div class="f"><label>Mayúsculas</label><input type="checkbox" data-bind="${key}|est.mayus" data-type="bool" ${e.mayus?'checked':''}><span></span></div>
   <div class="f"><label>Contorno</label><input type="range" data-bind="${key}|est.grosor" data-type="num" min="0" max="14" value="${e.grosor}" aria-label="Grosor del contorno"><input type="color" data-bind="${key}|est.contorno" value="${e.contorno}" aria-label="Color del contorno"></div>
   <div class="f"><label>Sombra</label><input type="checkbox" data-bind="${key}|est.sombra" data-type="bool" ${e.sombra?'checked':''}><span></span></div>
@@ -1023,7 +1047,8 @@ const ACT={
   delSfx:el=>commit(()=>{S.E.audio.sfx=S.E.audio.sfx.filter(x=>x.id!==el.dataset.v);if(S.sel?.id===el.dataset.v)S.sel=null}),
   color:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.color=el.dataset.v;t.est.efecto='ninguno'})},
   fmt:el=>{const t=target(el.dataset.k);if(!t)return;const v=el.dataset.v;commit(()=>{if(v==='negrita')t.est.peso=t.est.peso>=700?400:800;else t.est[v]=!t.est[v]})},
-  efecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.efecto=el.dataset.v;if(t.est.brillo==null)t.est.brillo=70})},
+  efecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.efecto=el.dataset.v;if(t.est.brillo==null)t.est.brillo=70;if(el.dataset.v==='personal'){if(!t.est.colorEfecto)t.est.colorEfecto='#FF4FD8';if(t.est.tornasol==null)t.est.tornasol=60}})},
+  colorEfecto:el=>{const t=target(el.dataset.k);if(t)commit(()=>{t.est.colorEfecto=el.dataset.v;t.est.efecto='personal'})},
   pos:el=>{const t=target(el.dataset.k);if(t)commit(()=>(el.dataset.k==='sub'?grupo(t):[t]).forEach(o=>{o.y=+el.dataset.v;o.x=0.5}))},
   estiloTodos:()=>{const it=selItem();if(!it)return;commit(()=>S.E.subs.forEach(s=>{s.est={...it.est};s.x=it.x;s.y=it.y;s.rot=it.rot||0}));toast('Estilo aplicado a todos los subtítulos.')},
   preset:el=>{const k=el.dataset.v;commit(()=>{S.E.filtro={...FILTRO0,...PRESETS[k][1],preset:k}})},

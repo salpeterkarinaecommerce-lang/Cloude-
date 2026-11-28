@@ -31,7 +31,9 @@ ESTUDIO DE VIDEO · protocolo para subir videos (Artifact + ArtifactData)
    fondo ("ninguno"|"caja"), colorFondo, opFondo, anim ("pop"|"fundido"|
    "subir"|"escribir"|"karaoke"), resaltado, efecto ("neon-dorado"|
    "neon-rosa"|"neon-celeste"|"neon-verde"|"fuego"|"oro"|"plata"|
-   "arcoiris"), brillo (0-100), cursiva, subrayado, ancho, alin.
+   "arcoiris"|"personal"), colorEfecto (hex, con "personal"), tornasol
+   (0-100, reflejo tornasolado con "personal"), brillo (0-100), cursiva,
+   subrayado, ancho, alin.
    Los textos fijos (títulos, etiquetas) van en "textos" con el mismo formato.
 5. Actualizá el proyecto: ArtifactData "set" (nuevo) o "update" (existente)
    en proyectos/<id>
