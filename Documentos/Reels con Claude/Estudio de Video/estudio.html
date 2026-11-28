@@ -390,11 +390,12 @@ const vHold=document.createElement('div');vHold.setAttribute('aria-hidden','true
 function prepVideo(v){v.playsInline=true;v.setAttribute('playsinline','');v.setAttribute('webkit-playsinline','');v.style.cssText='width:2px;height:2px';vHold.appendChild(v);return v}
 prepVideo(vid);prepVideo(vPrev);
 /* El iPhone no decodifica cuadros hasta que el video se reproduce una vez: play silencioso y pausa */
-function despertar(v){if(v.readyState>=2)return;const m=v.muted;v.muted=true;const pr=v.play();if(pr)pr.then(()=>{if(!(v===vid&&S.playing))v.pause();v.muted=m;S.needDraw=true;if(v===vid&&!S.playing)syncVideo(S.T)}).catch(()=>{v.muted=m})}
+function sonidoVideo(){if(S.exporting)return;if(S.E)applyVol(S.T);else vid.muted=false}
+function despertar(v){if(v.readyState>=2)return;v.muted=true;const pr=v.play();const fin=()=>{if(v===vid)sonidoVideo()};if(pr)pr.then(()=>{if(!(v===vid&&S.playing))v.pause();fin();S.needDraw=true;if(v===vid&&!S.playing)syncVideo(S.T)}).catch(fin)}
 vid.addEventListener('loadedmetadata',()=>despertar(vid));vPrev.addEventListener('loadedmetadata',()=>despertar(vPrev));
 let desbloqueado=false;
-addEventListener('pointerdown',()=>{if(desbloqueado||!vid.getAttribute('src'))return;desbloqueado=true;try{ensureAC();ac.resume()}catch{}
-  if(!S.playing){vid.muted=true;const pr=vid.play();if(pr)pr.then(()=>{vid.muted=false;if(!S.playing){vid.pause();syncVideo(S.T)}}).catch(()=>{vid.muted=false});despertar(vPrev)}},{capture:true});
+addEventListener('pointerdown',()=>{try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}if(desbloqueado||!vid.getAttribute('src'))return;desbloqueado=true;try{ensureAC();ac.resume()}catch{}
+  if(!S.playing){vid.muted=true;const pr=vid.play();if(pr)pr.then(()=>{if(!S.playing){vid.pause();syncVideo(S.T)}sonidoVideo()}).catch(sonidoVideo);despertar(vPrev)}},{capture:true});
 vid.addEventListener('seeked',()=>{S.needDraw=true; if(!S.playing&&!S.exporting) syncVideo(S.T)});
 vPrev.addEventListener('seeked',()=>{S.needDraw=true});
 vid.addEventListener('loadeddata',()=>{S.needDraw=true});
@@ -536,9 +537,10 @@ function fitCanvas(){const w=$('#cwrap'),cw=w.clientWidth-20,ch=w.clientHeight-2
 new ResizeObserver(fitCanvas).observe($('#cwrap'));
 let ac=null,master=null,salida=null,vidGain=null,live=[];
 function limitador(){const pre=ac.createGain();pre.gain.value=0.5;const ws=ac.createWaveShaper();const n=4096,cur=new Float32Array(n);for(let i=0;i<n;i++){const v=(i/(n-1)*2-1)*2,a=Math.abs(v);cur[i]=Math.sign(v)*(a<0.6?a:0.6+0.27*Math.tanh((a-0.6)/0.27))}ws.curve=cur;ws.oversample='4x';pre.connect(ws);return{entrada:pre,ws}}
-function ensureAC(){if(ac)return ac;ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();salida=limitador();master.connect(salida.entrada);salida.ws.connect(ac.destination);try{const src=ac.createMediaElementSource(vid);vidGain=ac.createGain();src.connect(vidGain);vidGain.connect(master)}catch(e){vidGain=null}return ac}
+function ensureAC(){if(ac)return ac;ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();salida=limitador();master.connect(salida.entrada);salida.ws.connect(ac.destination);return ac}
 function vidVol(T){const a=S.E.audio;if(a.mute)return 0;let v=a.vol;const tot=dur();if(a.fadeIn>0&&T<a.fadeIn)v*=T/a.fadeIn;if(a.fadeOut>0&&T>tot-a.fadeOut)v*=Math.max(0,(tot-T)/a.fadeOut);return v}
-function applyVol(T){const v=vidVol(T);if(vidGain)vidGain.gain.value=v;else vid.volume=clamp(v,0,1)}
+/* Vista previa: sonido propio del video (se oye aunque el iPhone esté en silencio). Exportación: audio del archivo decodificado y mezclado. */
+function applyVol(T){const v=vidVol(T);if(S.exporting){vid.muted=true;if(vidGain)vidGain.gain.value=v;return}const mute=v<=0.001;if(vid.muted!==mute)vid.muted=mute;try{const nv=clamp(v,0,1);if(Math.abs(vid.volume-nv)>0.01)vid.volume=nv}catch{}}
 function stopAudio(){live.forEach(n=>{try{n.stop()}catch{}});live=[]}
 function precargarAudio(){if(!S.E)return;const m=S.E.audio.musica;if(m)getBuffer(m.ref).catch(()=>{});S.E.audio.sfx.forEach(x=>getBuffer(x.ref).catch(()=>{}))}
 async function scheduleAudio(Targ){
@@ -563,7 +565,7 @@ function play(){if(!S.E||S.exporting)return;ensureAC();ac.resume();if(S.T>=dur()
   const tok=S.playTok=(S.playTok||0)+1;
   const arrancar=()=>{if(tok!==S.playTok||!S.playing)return;const pr=vid.play();
     Promise.resolve(pr).then(()=>{if(tok!==S.playTok||!S.playing)return;reprogramarAudio(tok)}).catch(()=>{if(tok!==S.playTok)return;pause();toast('El navegador no dejó reproducir. Tocá play otra vez.')})};
-  if(Math.abs(vid.currentTime-L.s)>0.04){vid.currentTime=L.s;once(vid,'seeked',3000).then(arrancar)}else arrancar()}
+  if(Math.abs(vid.currentTime-L.s)>0.04){vid.currentTime=L.s;const pr=vid.play();if(pr)pr.catch(()=>{});once(vid,'seeked',3000).then(arrancar)}else arrancar()}
 function reprogramarAudio(tok){if(S.reprog)return;S.reprog=true;scheduleAudio(()=>tiempoVideo()).then(now=>{S.reprog=false;if(tok!==S.playTok||!S.playing){stopAudio();return}S.T0=S.audT;S.acT0=now}).catch(()=>{S.reprog=false})}
 function pause(){S.playing=false;S.acT0=null;S.playTok=(S.playTok||0)+1;vid.pause();stopAudio();updateTransport();S.needDraw=true}
 function toggle(){S.playing?pause():play()}
@@ -955,7 +957,7 @@ function renderInspector(){const b=$('#inspBody');
       <div class="f"><label>Al terminar</label><select data-bind="outro|tipo">${opt(BORDES,E.outro.tipo)}</select><span></span></div>${rng_('Duración','outro|dur',E.outro.dur,0.2,3,0.1,' s')}</div>`;
   }
   else if(S.tab==='audio'){const a=E.audio,m=a.musica;
-    h+=`<div class="sec"><h4>Audio del video</h4>${rng_('Volumen','audio|vol',a.vol,0,2,0.05)}<div class="f"><label>Silenciar</label><input type="checkbox" data-bind="audio|mute" data-type="bool" ${a.mute?'checked':''}><span></span></div>${rng_('Entrada suave','audio|fadeIn',a.fadeIn,0,3,0.1,' s')}${rng_('Salida suave','audio|fadeOut',a.fadeOut,0,3,0.1,' s')}</div>
+    h+=`<div class="sec"><h4>Audio del video</h4>${rng_('Volumen','audio|vol',a.vol,0,2,0.05)}${a.vol>1?'<p class="hint">Más de 100%: en la vista previa se oye al máximo normal; el refuerzo se aplica al exportar.</p>':''}<div class="f"><label>Silenciar</label><input type="checkbox" data-bind="audio|mute" data-type="bool" ${a.mute?'checked':''}><span></span></div>${rng_('Entrada suave','audio|fadeIn',a.fadeIn,0,3,0.1,' s')}${rng_('Salida suave','audio|fadeOut',a.fadeOut,0,3,0.1,' s')}</div>
     <div class="sec"><h4>Música</h4>${m?`<div class="item ${S.sel?.k==='mus'?'sel':''}"><div class="top"><b>${esc(m.nombre)}</b><span class="spacer"></span><button class="icon sm" data-act="quitarMusica" aria-label="Quitar música">${ICON.trash}</button></div>${rng_('Volumen','mus|vol',m.vol,0,1.5,0.05)}<div class="f"><label>Empieza en</label>${tin('mus|ini',m.ini||0,'Inicio de la música')}<span></span></div><div class="f"><label>Fundido final</label><input type="checkbox" data-bind="mus|fade" data-type="bool" ${m.fade!==false?'checked':''}><span></span></div></div>`:'<p class="hint">Sin música. Elegí una canción en la biblioteca.</p>'}<div class="row-btns"><button class="btn sm" data-act="abrirSonidos">Abrir biblioteca de sonidos</button></div></div>
     <div class="sec"><h4>Efectos de sonido (${a.sfx.length})</h4>${a.sfx.map(s=>`<div class="item ${S.sel?.id===s.id?'sel':''}" data-act="selSfx" data-v="${s.id}"><div class="top"><b style="flex:1">${esc(s.nombre)}</b>${tin('sfx:'+s.id+'|a',s.a,'Momento')}<button class="icon sm" data-act="delSfx" data-v="${s.id}" aria-label="Borrar">${ICON.trash}</button></div>${rng_('Volumen','sfx:'+s.id+'|vol',s.vol??1,0,2,0.05)}</div>`).join('')||'<p class="hint">Agregá whooshes, pops o dings desde la biblioteca: se colocan en el cursor.</p>'}</div>`;
   }
@@ -1234,12 +1236,16 @@ async function exportar(){
     const dest=ac.createMediaStreamDestination();salida.ws.disconnect();salida.ws.connect(dest);
     const vs=ec.captureStream(E.calidad.fps);const stream=new MediaStream([...vs.getVideoTracks(),...dest.stream.getAudioTracks()]);
     const rec=new MediaRecorder(stream,{mimeType:mime.type,videoBitsPerSecond:bps(E.calidad),audioBitsPerSecond:192000});const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    $('#expMsg').textContent='Leyendo el audio del video…';const vbuf=await getBuffer(S.version.video.assetId?{assetId:S.version.video.assetId}:{url:videoURL(S.version)}).catch(()=>null);
+    if(!vbuf)toast('No pude leer el audio de este video: el MP4 va a salir con la música y los efectos, sin el sonido original.');
+    vidGain=ac.createGain();vidGain.connect(master);vid.muted=true;
     const L=layout();$('#expMsg').textContent='Grabando… dejá esta pestaña visible.';
     for(let i=0;i<L.length;i++){const o=L[i];
       if(rec.state==='recording')rec.pause();await ac.suspend();vid.pause();
       await seekTo(vid,o.c.ini);if(i>0){const tr=transDe(o.c.id);if(tr.tipo==='disolver'||tr.tipo==='deslizar')await seekTo(vPrev,Math.max(0,L[i-1].c.fin-0.04))}
       drawFrame(ex,W,H,o.start,{});applyVol(o.start);
       if(i===0){await scheduleAudio(0);rec.start(1000)}else rec.resume();
+      if(vbuf&&o.c.ini<vbuf.duration){const src=ac.createBufferSource();src.buffer=vbuf;src.connect(vidGain);src.start(ac.currentTime,o.c.ini,Math.min(o.len,vbuf.duration-o.c.ini));live.push(src)}
       await ac.resume();await vid.play().catch(()=>{});
       while(true){await nextFrame();if(cancel)throw new Error('cancel');const s=vid.currentTime;const T=o.start+clamp(s-o.c.ini,0,o.len);applyVol(T);drawFrame(ex,W,H,T,{});$('#expBar').style.width=(T/tot*100).toFixed(1)+'%';if(s>=o.c.fin-0.001||vid.ended)break}
       vid.pause();
@@ -1255,7 +1261,7 @@ async function exportar(){
     $('#expSave').onclick=guardarExport;$('#expClose').onclick=()=>{$('#modal').hidden=true};
     guardarExport();
   }catch(err){$('#modal').hidden=true;if(err?.message!=='cancel')toast('La exportación falló: '+esc(err?.message||err));else toast('Exportación cancelada.')}
-  finally{S.exporting=false;stopAudio();vid.pause();try{salida.ws.disconnect();salida.ws.connect(ac.destination);await ac.resume()}catch{}S.needDraw=true;syncVideo(S.T)}
+  finally{S.exporting=false;stopAudio();vid.pause();try{vidGain?.disconnect()}catch{}vidGain=null;sonidoVideo();try{salida.ws.disconnect();salida.ws.connect(ac.destination);await ac.resume()}catch{}S.needDraw=true;syncVideo(S.T)}
 }
 async function guardarExport(){if(!ultimoExport)return;const msg=$('#expMsg');
   if(!S.downloads){msg.innerHTML+='<br>Esta vista no permite descargar archivos. Abrí la página en claude.ai.';return}
